@@ -12,8 +12,8 @@ local fs = require("filesystem")
 local rc = require("rc")
 -- shortened
 local gpu = component.gpu
-local data = component.data
-local redstone = component.redstone
+local data = component.isAvailable("data") and component.data or nil
+local redstone = component.isAvailable("redstone") and component.redstone or nil
 local color = gpu.setForeground
 local sleep = os.sleep
 local write = io.write
@@ -128,7 +128,7 @@ end
 
 function loadSettings()--TODO generate file
     local file = open(settingsFile, "r")
-    passwd = data.decode64(file:read("*l"))
+    if data then passwd = data.decode64(file:read("*l")) end
     firstRun = unserialize(file:read("*l"))
     dobeep = unserialize(file:read("*l"))
     side = tonumber(unserialize(file:read("*l")))
@@ -141,7 +141,7 @@ end
 
 function saveSettings()
     local file = open(settingsFile, "w")
-    file:write(data.encode64(passwd).."\n")
+    if data then file:write(data.encode64(passwd).."\n") end
     file:write(serialize(firstRun) .. "\n")
     file:write(serialize(dobeep) .. "\n")
     file:write(serialize(side) .. "\n")
@@ -268,24 +268,22 @@ end
 function checkHardware()	--test hardware compatibility
     local w, h = gpu.maxResolution()
     print("Checking hardware...")
-    if component.isAvailable("gpu") then
-        if w >= resolution[1] and h >= resolution[2] then
-            if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
-                if component.isAvailable("redstone") then
-                    if component.isAvailable("data") then
-                        return	--everything OK
-                    else
-                        prtWarn("Data component not found.")
-                    end
+    if w >= resolution[1] and h >= resolution[2] then
+        if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
+            if redstone then
+                if data then
+                    return	--everything OK
                 else
-                    prtWarn("Redstone component not found.")
+                    prtWarn("Data component not found.")
                 end
             else
-                prtWarn("Unable to set resolution, too small screen or too weak GPU!")
+                prtWarn("Redstone component not found.")
             end
         else
             prtWarn("Unable to set resolution, too small screen or too weak GPU!")
         end
+    else
+        prtWarn("Unable to set resolution, too small screen or too weak GPU!")
     end
     prtBad("Fatal error: please upgrade your hardware and try again.\nTerminating...\n")
     color(0xFF00FF)
@@ -471,7 +469,7 @@ function setSide()	--change redstone controlled side
 end
 
 function setDefaults()
-    passwd = data.sha256("")
+    if data then passwd = data.sha256("") end
     firstRun = true
     dobeep = true
     side = 2
