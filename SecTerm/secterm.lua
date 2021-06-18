@@ -1,5 +1,5 @@
 --- Variables ---
--- libs
+-- Libs
 local term = require("term")
 local computer = require("computer")
 local component = require("component")
@@ -10,7 +10,7 @@ local colors = require("colors")
 local event = require("event")
 local fs = require("filesystem")
 local rc = require("rc")
--- shortened
+-- Shortened
 local gpu = component.gpu
 local data = component.isAvailable("data") and component.data or nil
 local redstone = component.isAvailable("redstone") and component.redstone or nil
@@ -34,9 +34,9 @@ local unserialize = serialization.unserialize
 local read = term.read
 local clear = term.clear
 local clearln = term.clearLine
--- global
-local terminateFlag = false    --terminate execution of main program
-local restartFlag = false    --restart after termination
+-- Global
+local terminateFlag = false  -- terminate execution of main program
+local restartFlag = false    -- restart after termination
 local errLog
 local settings
 local redState
@@ -46,7 +46,7 @@ local dobeep
 local passwd
 local firstRun
 local multiSide
--- const
+-- Const
 local settingsFile = "/etc/secterm.conf"
 local rcFile = "/etc/rc.d/secterm.lua"
 local logDir = "/var/log"
@@ -108,11 +108,11 @@ function beep(...)
     end
 end
 
-function redMap(n)  --map enderIO color sequence to color API numbers (the tool just uses that sequence since an older version that was made specifically for EnderIO conduits and I thought I'd keep it)
+function redMap(n)  -- Map enderIO color sequence to color API numbers (the tool just uses that sequence since an older version that was made specifically for EnderIO conduits and I thought I'd keep it)
     return fmod((31 - n),16)
 end
 
-function colorState(b)    --print a green "ON" or a red "OFF" according to the argument
+function colorState(b)  -- Print a green "ON" or a red "OFF" according to the argument
     if b then
         prtGood("ON")
     else
@@ -120,14 +120,14 @@ function colorState(b)    --print a green "ON" or a red "OFF" according to the a
     end
 end
 
-function terminate()    --terminate execution
+function terminate()  -- Terminate execution
     terminateFlag = true
     prtWarn("Terminating execution...")
     beep(500)
     beep(120, .3)
 end
 
-function loadSettings()
+function loadSettings()  -- Load settings file into memory
     local file = open(settingsFile, "r")
     passwd = data.decode64(file:read("*l"))
     firstRun = unserialize(file:read("*l"))
@@ -141,7 +141,7 @@ function loadSettings()
     prtWarn("Settings loaded!")
 end
 
-function saveSettings()
+function saveSettings()  -- Save settings file from memory
     local file = open(settingsFile, "w")
     file:write(data.encode64(passwd).."\n")
     file:write(serialize(firstRun) .. "\n")
@@ -185,7 +185,7 @@ function prtHeader(msg)
     color(0xFFFFFF)
 end
 
-function prtOpts(maxNum4Padding)
+function prtOpts(maxNum4Padding)  -- Print available options added by the user
     for i = 1, #settings, 1 do
         sleep(.05)
         write(i .. ". " .. getPadding(i, maxNum4Padding) .. settings[i][1])
@@ -202,7 +202,7 @@ function waitEnter(--[[optional]]startWithNL)
     read()
 end
 
-function askSide()
+function askSide()  -- Ask user for a side to control, after printing the options, returns the side number
     print("Available sides:")
     for i = 1, 6, 1 do
         print("\t" .. i .. ". " .. sides[i-1])
@@ -219,11 +219,11 @@ function askSide()
     end
 end
 
-function digitNum(num)
+function digitNum(num)  -- Returns number of digits in num
     return floor(log(num, 10) + 1)
 end
 
-function getPadding(num, max)
+function getPadding(num, max)  -- Returns a padding to align numbers, num's the current number, max is the biggest number that will be printed
     local padding = ""
     local r = digitNum(max) - digitNum(num)
     for _ = 1, r, 1 do
@@ -232,7 +232,7 @@ function getPadding(num, max)
     return padding
 end
 
-function readPW(prompt) -- reads password input and returns hash
+function readPW(prompt)  -- Reads password input and returns hash
     prtPrompt(prompt .. ": ")
     color(0xFFAA00)
     local input = read({}, false, {}, "*")
@@ -241,7 +241,7 @@ function readPW(prompt) -- reads password input and returns hash
     return input and data.sha256(text.trim(input)) or false
 end
 
-function verifyPW(prompt)    --check password
+function verifyPW(prompt)  -- Check password
     local input = readPW(prompt)
     color(0xe57fd8)
     for _ = 1, 5, 1 do
@@ -252,7 +252,7 @@ function verifyPW(prompt)    --check password
     return input == passwd
 end
 
-function setPW()    --change password
+function setPW()  -- Change password
     clear()
     local verifyCurr = verifyPW("Enter current password")
     if verifyCurr then
@@ -272,34 +272,34 @@ function setPW()    --change password
     sleep(1.5)
 end
 
-function getRed(obj) --Get digital redstone signal
+function getRed(obj)  -- Get digital redstone signal
     return (redstone.getBundledOutput(side, obj) > 0)
 end
 
-function setRed(obj, ctrSide, stateArg) --Set digital redstone signal
+function setRed(obj, ctrSide, stateArg)  -- Set digital redstone signal
     local state = stateArg * 15
-    if getRed(obj) ~= (stateArg > 0) then    --if requested state is different than current
-        redstone.setBundledOutput(ctrSide, obj, state)    --set state
-        redState[obj + 1] = stateArg    --save state to memory
+    if getRed(obj) ~= (stateArg > 0) then    -- If requested state is different than current
+        redstone.setBundledOutput(ctrSide, obj, state)    -- Set state
+        redState[obj + 1] = stateArg    -- Save state to memory
         beep(stateArg > 0 and 520 or 420, .04)
     end
 end
 
-function redResume()
+function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
     for i = 1, 16, 1 do
         setRed(i - 1, redState[i])
     end
 end
 
-function checkHardware()    --test hardware compatibility
+function checkHardware()  -- Test hardware compatibility and display errors (also tries to set the selected resolution)
     local w, h = gpu.maxResolution()
     print("Checking hardware...")
     if w >= resolution[1] and h >= resolution[2] then
         if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
             if component.isAvailable("redstone") then
                 if component.isAvailable("data") then
-                    return    --everything OK
+                    return  -- Everything OK
                 else
                     prtWarn("Data component not found.")
                 end
@@ -324,38 +324,38 @@ function checkHardware()    --test hardware compatibility
     terminate()
 end
 
-function init(...)    --initialize program and terminal
+function init(...)  -- Initialize program and terminal
     clear()
-    event.shouldInterrupt = function() return false end
+    event.shouldInterrupt = function() return false end  -- Disable interrupts
     print("Initializing...")
     sleep(1)
-    if not fs.exists(rcFile) then
+    if not fs.exists(rcFile) then  -- Generate service file
         local file = open(rcFile, "w")
         file:write(rcScript)
         file:close()
     end
-    if not fs.exists(logDir) then
+    if not fs.exists(logDir) then  -- Generate log dir
         fs.makeDirectory(logDir)
     end
-    errLog = open(logFile,"a")
-    if redstone and data then
-        if not fs.exists(settingsFile) then
+    errLog = open(logFile,"a")  -- Open log file
+    if redstone and data then  -- Only load settings file if the hardware is okay
+        if not fs.exists(settingsFile) then  -- Generate settings if they don't exist
             setDefaults()
         end
-        loadSettings()    --load to memory
-    else    -- fallback
+        loadSettings()  -- Load to memory
+    else  -- Fallback
         resolution = {80, 25}
         dobeep = true
     end
-    if firstRun then    --if first run, display about page
+    if firstRun then  -- If first run, display about page
         about()
         clear()
     end
-    checkHardware()
-    if terminateFlag then return end
-    redResume()        --if hardware is ok, restore last redstone channel states
+    checkHardware()  -- Display hardware issues (and set selected resolution)
+    if terminateFlag then return end  -- On hardware error, stop
+    redResume()        -- If hardware is ok, restore last redstone channel states
     print("Preparing...")
-    if firstRun then    --got through checks, don't display about on startup again
+    if firstRun then    -- Got through checks, don't display about on startup again
         firstRun = false
         saveSettings()
     end
@@ -367,7 +367,7 @@ function init(...)    --initialize program and terminal
     clear()
 end
 
-function addMenu()    --add new menu option
+function addMenu()  -- Add new menu option
     local t, j, ans = {}
     clear()
     t[1] = ask("Item title")
@@ -378,19 +378,19 @@ function addMenu()    --add new menu option
         t[2] = tmpSide
         ans = ask("channels to control")
         if ans ~= nil then
-            for i in string.gmatch(ans, "%S+") do    --split channels
+            for i in string.gmatch(ans, "%S+") do    -- Split channels
                 j = tonumber(i)
                 if j == nil then
                     prtBad("Invalid input, aborting.")
                     sleep(0.8)
                     return
                 end
-                insert(t, j)    --and insert them in the new table
+                insert(t, j)    -- And insert them in the new table
             end
-            insert(settings, t)    --insert new table into settings table
+            insert(settings, t)    -- Insert new table into settings table
             prtWarn("Item created successfully!")
             sleep(0.3)
-            saveSettings()    --dump settings from memory to disk
+            saveSettings()    -- Dump settings from memory to disk
         else
             prtBad("Invalid input, aborting.")
         end
@@ -398,7 +398,7 @@ function addMenu()    --add new menu option
     sleep(0.7)
 end
 
-function remMenu()  --remove menu option
+function remMenu()  -- Remove menu option
     local ans
     clear()
     if #settings == 0 then
@@ -423,7 +423,7 @@ function remMenu()  --remove menu option
     end
 end
 
-function redInfo()    --print redstone info and channel states
+function redInfo()  -- Print redstone info and channel states
     clear()
     print(redInfoPage)
     color(0xFF00FF)
@@ -442,7 +442,7 @@ function redInfo()    --print redstone info and channel states
     waitEnter(true)
 end
 
-function itemInfo()    --print info
+function itemInfo()   -- Print info
     clear()
     prtHeader("--- Item info ---\n")
     print(itemInfoPage)
@@ -450,7 +450,7 @@ function itemInfo()    --print info
     waitEnter(true)
 end
 
-function setRes()    --change resolution
+function setRes()  -- Change resolution
     local w, h = unpack(resolution)
     local mw, mh = gpu.maxResolution()
     clear()
@@ -477,7 +477,7 @@ function setRes()    --change resolution
     end
 end
 
-function setSide()    --change redstone controlled side
+function setSide()  -- Change redstone controlled side
     local ans
     clear()
     print("From here you can choose which side should be used for redstone control.")
@@ -514,7 +514,7 @@ function setDefaults()
     saveSettings()
 end
 
-function defaultsPrompt()    --replace files with default ones
+function defaultsPrompt()  -- Replace settings with default ones
     local ans
     clear()
     print("This will restore the default settings!")
@@ -532,14 +532,14 @@ function defaultsPrompt()    --replace files with default ones
             print("The program will now restart, to apply the changes!")
             sleep(.5)
             waitEnter()
-            terminate() --Terminate program
+            terminate() -- Restart program
             restartFlag = true
             break;
         end
     until ans == "n"
 end
 
-function toggleMultiSide()
+function toggleMultiSide()  -- Toggle multi-side mode
     multiSide=not multiSide
     saveSettings()
     prtWarn("\nMulti-side mode " .. (multiSide and "enabled" or "disabled"))
@@ -547,7 +547,7 @@ function toggleMultiSide()
     sleep(1.5)
 end
 
-function toggleBeep()    --toggle beeper
+function toggleBeep()  -- Toggle beeper
     dobeep=not dobeep
     saveSettings()
     prtWarn("\nBeeper " .. (dobeep and "unmuted" or "muted"))
@@ -555,7 +555,7 @@ function toggleBeep()    --toggle beeper
     sleep(1.5)
 end
 
-function toggleService()
+function toggleService()  -- Enable/disable service (run on startup)
     local service = rc.loaded["secterm"]
     exec("rc secterm " .. (service and "disable" or "enable"))
     prtWarn("\nService " .. (service and "disabled" or "enabled"))
@@ -563,7 +563,7 @@ function toggleService()
     sleep(1.5)
 end
 
-function menuPrt()    --prints menu, returns number of options (excluding settings & exit)
+function menuPrt()  -- Prints menu, returns number of options (excluding settings & exit)
     clear()
     prtHeader("--- MENU ---\n")
     local settingsIndex = #settings + 1
@@ -576,7 +576,7 @@ function menuPrt()    --prints menu, returns number of options (excluding settin
     return #settings
 end
 
-function menuInvalid()
+function menuInvalid()  -- Print invalid choice error
     prtBad("Invalid choice.")
     sleep(.7)
     clearln()
@@ -585,7 +585,7 @@ function menuInvalid()
     prtPrompt("Enter your choice: ")
 end
 
-function menuSettings()    --settings menu
+function menuSettings()  -- Settings menu
     local func, ans = {
         {about, "About"},
         {setPW, "Change password"},
@@ -616,9 +616,9 @@ function menuSettings()    --settings menu
         ans = tonumber(ans)
         if ans ~= nil then
             if ans > 0 and ans <= #func then
-                func[ans][1]()
+                func[ans][1]()  -- Exec option
                 return
-            elseif ans == #func + 1 then    -- back
+            elseif ans == #func + 1 then  -- Back
                 return
             end
         end
@@ -627,9 +627,10 @@ function menuSettings()    --settings menu
     end
 end
 
-function onoff(opt)    --show component states, ask user for new state
+function onoff(opt)  -- Show component states, ask user for new state
     local obj, ans
     clear()
+    -- Show states
     if #settings[opt] == 3 then
         obj = redMap(settings[opt][3])
         write("This component (" .. colors[obj] .. ") is currently ")
@@ -643,6 +644,7 @@ function onoff(opt)    --show component states, ask user for new state
         end
     end
     sleep(.3)
+    -- Show menu
     print("\nWhat do you want to do?\n")
     print("1. Turn ON")
     print("2. Turn OFF")
@@ -659,7 +661,7 @@ function onoff(opt)    --show component states, ask user for new state
     end
 end
 
-function menu()    --menu functionality
+function menu()  -- Menu functionality
     local onOffOptNum, ans
     sleep(.2)
     onOffOptNum = menuPrt()
@@ -671,14 +673,14 @@ function menu()    --menu functionality
             if ans ~= nil then
                 if ans <= 0 then
                     menuInvalid()
-                elseif ans <= onOffOptNum then        --on/off
+                elseif ans <= onOffOptNum then        -- On/Off
                     onoff(ans)
                     menuPrt()
-                elseif ans == onOffOptNum + 1 then            --settings
+                elseif ans == onOffOptNum + 1 then    -- Settings
                     menuSettings()
                     if terminateFlag then break end
                     onOffOptNum = menuPrt()
-                elseif ans == onOffOptNum + 2 then        --exit
+                elseif ans == onOffOptNum + 2 then    -- Exit
                     sleep(.2)
                     clear()
                     break;
@@ -689,7 +691,7 @@ function menu()    --menu functionality
                 menuInvalid()
             end
         else
-            break    --on ctrl+c
+            break    -- On interrupt
         end
     end
 end
@@ -703,7 +705,7 @@ function main()
         sleep(.01)
         beep(500)
         sleep(.5)
-        menu()    --Menu--
+        menu()    -- Menu
         if terminateFlag then return end
         prtWarn("Exiting...\n")
         beep(500)
@@ -720,7 +722,7 @@ function main()
     sleep(.2)
 end
 
-function errorHandler(err)
+function errorHandler(err)  -- Log error & traceback
     errLog:write("-------------\n    ERROR\n-------------\n")
     errLog:write(date() .. (err and " - " .. err or "") .. "\n-------------\n")
     errLog:write(traceback() .. "\n\n")
@@ -738,7 +740,7 @@ end
 
 --- END ---
 
-gpu.setResolution(unpack(nativeRes))
+gpu.setResolution(unpack(nativeRes))  -- Reset resolution
 if errLog then errLog:close() end
 sleep(.5)
 clear()
