@@ -112,17 +112,18 @@ function redMap(n)  -- Map enderIO color sequence to color API numbers (the tool
     return fmod((31 - n),16)
 end
 
-function colorState(b)  -- Print a green "ON" or a red "OFF" according to the argument
+function colorState(b, --[[optional]]noNL)  -- Print a green "ON" or a red "OFF" according to the argument
     if b then
-        prtGood("ON")
+        prtGood("ON", noNL)
     else
-        prtBad("OFF")
+        prtBad("OFF", noNL)
     end
 end
 
-function terminate()  -- Terminate execution
+function terminate(--[[optional]]restart)  -- Terminate execution
     terminateFlag = true
-    prtWarn("Terminating execution...")
+    restartFlag = restart or false
+    prtWarn("Terminating execution" .. (restart and "(restarting)" or "") .. "...")
     beep(500)
     beep(120, .3)
 end
@@ -155,21 +156,21 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
-function prtGood(msg)
+function prtGood(msg, --[[optional]]noNL)
     color(0x00FF00)
-    print(msg)
+    write(msg .. (noNL and "" or "\n"))
     color(0xFFFFFF)
 end
 
-function prtWarn(msg)
+function prtWarn(msg, --[[optional]]noNL)
     color(0xFFFF00)
-    print(msg)
+    write(msg .. (noNL and "" or "\n"))
     color(0xFFFFFF)
 end
 
-function prtBad(msg)
+function prtBad(msg, --[[optional]]noNL)
     color(0xFF0000)
-    print(msg)
+    write(msg .. (noNL and "" or "\n"))
     color(0xFFFFFF)
 end
 
@@ -192,9 +193,16 @@ function prtOpts(maxNum4Padding)  -- Print available options added by the user
     end
 end
 
+function coloredRead(...)
+    color(0xFFAA00)
+    local input = read(...)
+    color(0xFFFFFF)
+    return input
+end
+
 function ask(prompt)
     prtPrompt(prompt .. ": ")
-    return read()
+    return coloredRead()
 end
 
 function waitEnter(--[[optional]]startWithNL)
@@ -234,9 +242,7 @@ end
 
 function readPW(prompt)  -- Reads password input and returns hash
     prtPrompt(prompt .. ": ")
-    color(0xFFAA00)
-    local input = read({}, false, {}, "*")
-    color(0xFFFFFF)
+    local input = coloredRead({}, false, {}, "*")
     clearln()
     return input and data.sha256(text.trim(input)) or false
 end
@@ -272,13 +278,13 @@ function setPW()  -- Change password
     sleep(1.5)
 end
 
-function getRed(obj)  -- Get digital redstone signal
-    return (redstone.getBundledOutput(side, obj) > 0)
+function getRed(obj, ctrlSide)  -- Get digital redstone signal
+    return (redstone.getBundledOutput(ctrlSide, obj) > 0)
 end
 
 function setRed(obj, ctrSide, stateArg)  -- Set digital redstone signal
     local state = stateArg * 15
-    if getRed(obj) ~= (stateArg > 0) then    -- If requested state is different than current
+    if getRed(obj, ctrlSide) ~= (stateArg > 0) then    -- If requested state is different than current
         redstone.setBundledOutput(ctrSide, obj, state)    -- Set state
         redState[obj + 1] = stateArg    -- Save state to memory
         beep(stateArg > 0 and 520 or 420, .04)
@@ -427,15 +433,20 @@ function redInfo()  -- Print redstone info and channel states
     clear()
     print(redInfoPage)
     color(0xFF00FF)
-    print("NUM\tCOLOR\t\tSTATE")
+    write("NUM\tCOLOR\t\tSTATE (")
+    for i = 0, 5, 1 do
+        write(sides[i] .. (i < 5 and ", " or ""))
+    end
+    print(")")
     color(0x0000FF)
     print("------------------------------")
     for i = 1, 16, 1 do
-        color(0xFFFF00)
-        write(i)
-        color(0xFFFFFF)
+        prtWarn(i, true)
         write("\t" .. colors[redMap(i)] .. "     \t")
-        colorState(getRed(redMap(i)))
+        for j = 0, 5, 1 do
+            colorState(getRed(redMap(i), j), true)
+        end
+        print()
     end
     color(0xFFFFFF)
     sleep(.5)
@@ -469,6 +480,8 @@ function setRes()  -- Change resolution
                     resolution = pack(gpu.getResolution())
                     saveSettings()
                     return
+                else
+                    prtBad("Failed to set new resolution.")
                 end
             end
         end
@@ -478,7 +491,6 @@ function setRes()  -- Change resolution
 end
 
 function setSide()  -- Change redstone controlled side
-    local ans
     clear()
     print("From here you can choose which side should be used for redstone control.")
     if multiSide then
@@ -489,9 +501,7 @@ function setSide()  -- Change redstone controlled side
         return
     end
     write("Currently using: [")
-    color(0xFFFF00)
-    write(sides[side])
-    color(0xFFFFFF)
+    prtWarn(sides[side], true)
     print("]\n\n")
     local tmpSide = askSide()
     if tmpSide then
@@ -532,8 +542,7 @@ function defaultsPrompt()  -- Replace settings with default ones
             print("The program will now restart, to apply the changes!")
             sleep(.5)
             waitEnter()
-            terminate() -- Restart program
-            restartFlag = true
+            terminate(true) -- Restart program
             break;
         end
     until ans == "n"
@@ -577,10 +586,8 @@ function menuPrt()  -- Prints menu, returns number of options (excluding setting
 end
 
 function menuInvalid()  -- Print invalid choice error
-    prtBad("Invalid choice.")
+    prtBad("Invalid choice.", true)
     sleep(.7)
-    clearln()
-    term.setCursor(1, select(2, term.getCursor()) - 1)
     clearln()
     prtPrompt("Enter your choice: ")
 end
@@ -667,7 +674,7 @@ function menu()  -- Menu functionality
     onOffOptNum = menuPrt()
     while true do
         ans = -1
-        ans = read()
+        ans = coloredRead()
         if ans ~= nil then
             ans = tonumber(ans)
             if ans ~= nil then
