@@ -185,6 +185,13 @@ function prtHeader(msg)
     color(0xFFFFFF)
 end
 
+function prtOpts(maxNum4Padding)
+    for i = 1, #settings, 1 do
+        sleep(.05)
+        write(i .. ". " .. getPadding(i, maxNum4Padding) .. settings[i][1])
+    end
+end
+
 function ask(prompt)
     prtPrompt(prompt .. ": ")
     return read()
@@ -398,10 +405,7 @@ function remMenu()  --remove menu option
         prtBad("Nothing to remove.")
     else
         print("Available options:\n")
-        for i = 1, #settings, 1 do
-            sleep(.05)
-            write(i .. ". " .. getPadding(i, #settings) .. settings[i][1])
-        end
+        prtOpts(#settings)
         repeat
             ans = tonumber(ask("\nWhich one would you like to remove? (0 to abort)"))
             if ans ~=nil then
@@ -564,10 +568,7 @@ function menuPrt()	--prints menu, returns number of options (excluding settings 
     prtHeader("--- MENU ---\n")
     local settingsIndex = #settings + 1
     local exitIndex = settingsIndex + 1
-    for i = 1, #settings, 1 do
-        sleep(.05)
-        write(i .. ". " .. getPadding(i, exitIndex) .. settings[i][1])
-    end
+    prtOpts(exitIndex)
     sleep(.05)
     print(settingsIndex .. ". " .. getPadding(settingsIndex, exitIndex) .. "Settings")
     print(exitIndex .. ". " .. getPadding(exitIndex, exitIndex) .. "Exit\n")
