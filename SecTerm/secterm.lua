@@ -22,6 +22,8 @@ local pack = table.pack
 local unpack = table.unpack
 local insert = table.insert
 local remove = table.remove
+local match = string.match
+local gmatch = string.gmatch
 local fmod = math.fmod
 local floor = math.floor
 local log = math.log
@@ -35,17 +37,16 @@ local read = term.read
 local clear = term.clear
 local clearln = term.clearLine
 -- Global
-local terminateFlag = false  -- terminate execution of main program
-local restartFlag = false    -- restart after termination
-local errLog
-local settings
-local redState
-local resolution
-local side
-local dobeep
-local passwd
-local firstRun
-local multiSide
+local terminateFlag = false  -- True = terminate execution of main program
+local restartFlag = false    -- True = restart after termination
+local errLog                 -- File
+local settings               -- [entry][controlled components][1 for channel (is 1-16 or false), 2 for side (is 0-5 or false), 3 for strength when on (is 1-15 or false)]
+local redState               -- [side (0-5)][channel (1-16) or -1 for normal redstone (is )]
+local resolution             -- [1 for width, 2 for height]
+local side                   -- INT 0 - 5
+local dobeep                 -- True = activate beeper
+local passwd                 -- SHA256 hash
+local firstRun               -- True = first time running the program properly
 -- Const
 local settingsFile = "/etc/secterm.conf"
 local rcFile = "/etc/rc.d/secterm.lua"
@@ -69,7 +70,8 @@ Please keep in mind the following:
     a tier 1 or higher data card,
     enough memory.
   This program is designed to be used with ProjectRed Bundled Cables.
-  It might work fine with RedPower2 or even EnderIO Redstone Conduits in some versions.
+  It might work fine with RedPower2 or even EnderIO Redstone Conduits
+  in some versions.
   The default side used to control redstone is the back.
   The default password is empty.
   The only way to exit the program is through the settings menu.
@@ -81,12 +83,19 @@ using numbers (1-16). Each number matches a channel color.
 Here are the channel colors, their numbers and their current state:
 ]]
 local itemInfoPage = [[
-You can create/delete the items of the menu through the settings.
 Each item controls one or more ProjectRed Bundled Cable channel (color).
-The channels have to be specified using their numbers,
-take a look at "Redstone info" for more info.
-To specify more than one channel, write all the channel numbers,
-separated with spaces, when entering those.
+If no channel is specified, the side will be controlled with normal redstone.
+To not use the default side for a channel, you can specify a side override.
+You can also specify how strong you want the signal to be for each one.
+You specify everything with a number prepended by a letter, c for channel,
+s for side override, p for power (redstone strength, when on, 15 by default).
+You can find the channel numbers under "Redstone/channel info" and the
+side numbers under "Side info"!
+You can specify multiple channels to be controlled, separated by commas.
+Example: c2, c4 s2 p10
+This will control channel 2 of the default side with a strength of 15
+and channel 4 of the 2nd side with a strength of 10.
+To abort, leave the title blank!
 ]]
 local rcScript = [[
 function start()
@@ -109,7 +118,15 @@ function beep(...)
 end
 
 function redMap(n)  -- Map enderIO color sequence to color API numbers (the tool just uses that sequence since an older version that was made specifically for EnderIO conduits and I thought I'd keep it)
-    return fmod((31 - n),16)
+    if n then
+        return fmod((31 - n),16)
+    else
+        return false
+    end
+end
+
+function colorMap(n)
+    return n and colors[n] or "normal"
 end
 
 function colorState(b, --[[optional]]noNL)  -- Print a green "ON" or a red "OFF" according to the argument
@@ -133,7 +150,6 @@ function loadSettings()  -- Load settings file into memory
     passwd = data.decode64(file:read("*l"))
     firstRun = unserialize(file:read("*l"))
     dobeep = unserialize(file:read("*l"))
-    multiSide = unserialize(file:read("*l"))
     side = tonumber(unserialize(file:read("*l")))
     resolution = unserialize(file:read("*l"))
     redState = unserialize(file:read("*l"))
@@ -147,7 +163,6 @@ function saveSettings()  -- Save settings file from memory
     file:write(data.encode64(passwd).."\n")
     file:write(serialize(firstRun) .. "\n")
     file:write(serialize(dobeep) .. "\n")
-    file:write(serialize(multiSide) .. "\n")
     file:write(serialize(side) .. "\n")
     file:write(serialize(resolution) .. "\n")
     file:write(serialize(redState) .. "\n")
@@ -210,21 +225,12 @@ function waitEnter(--[[optional]]startWithNL)
     read()
 end
 
-function askSide()  -- Ask user for a side to control, after printing the options, returns the side number
-    print("Available sides:")
-    for i = 1, 6, 1 do
-        print("\t" .. i .. ". " .. sides[i-1])
+function sideListStr()  -- returns a string with a list of sides separated by commas
+    local s = ""
+    for i = 0, 5, 1 do
+        s = s .. sides[i] .. (i < 5 and ", " or "")
     end
-    ans = ask("\nSide(1-6)")
-    if ans ~= nil then
-        ans = tonumber(ans)
-        if ans ~= nil and ans > 0 and ans < 7 then
-            return ans - 1
-        else
-            prtBad("Invalid choice.")
-            return false
-        end
-    end
+    return s
 end
 
 function digitNum(num)  -- Returns number of digits in num
@@ -278,23 +284,31 @@ function setPW()  -- Change password
     sleep(1.5)
 end
 
-function getRed(obj, ctrlSide)  -- Get digital redstone signal
-    return (redstone.getBundledOutput(ctrlSide, obj) > 0)
+function getRed(channel, ctrlSide)  -- Get digital redstone signal
+    return channel and (redstone.getBundledOutput(ctrlSide, channel) > 0) or (redstone.getOutput(ctrlSide) > 0)
 end
 
-function setRed(obj, ctrSide, stateArg)  -- Set digital redstone signal
-    local state = stateArg * 15
-    if getRed(obj, ctrlSide) ~= (stateArg > 0) then    -- If requested state is different than current
-        redstone.setBundledOutput(ctrSide, obj, state)    -- Set state
-        redState[obj + 1] = stateArg    -- Save state to memory
-        beep(stateArg > 0 and 520 or 420, .04)
+function setRed(channel, ctrlSide, power, --[[optional]]noSave)  -- Set redstone signal
+    if not power then return end
+    if getRed(channel, ctrlSide) ~= (power > 0) then    -- If requested state is different than current
+        if channel then
+            redstone.setBundledOutput(ctrlSide, channel, power)    -- Set state
+            if not noSave then redState[ctrlSide][channel + 1] = power end   -- Save state to memory
+        else
+            redstone.setOutput(ctrlSide, power)    -- Set state
+            if not noSave then redState[ctrlSide][-1] = power end    -- Save state to memory
+        end
+        beep(power > 0 and 520 or 420, .04)
     end
 end
 
 function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
-    for i = 1, 16, 1 do
-        setRed(i - 1, redState[i])
+    for s = 0, 5, 1 do
+        for c = 0, 15, 1 do
+            setRed(c, s, redState[s][c], true)  -- Restore channels
+        end
+        setRed(false, s, redState[s][-1], true)  -- Restore normal redstone
     end
 end
 
@@ -374,34 +388,30 @@ function init(...)  -- Initialize program and terminal
 end
 
 function addMenu()  -- Add new menu option
-    local t, j, ans = {}
+    local item = {}
     clear()
-    t[1] = ask("Item title")
-    local tmpSide = multiSide and askSide() or side
-    if not tmpSide then
-        prtBad("Invalid side, aborting.")
-    else
-        t[2] = tmpSide
-        ans = ask("channels to control")
+    print(itemInfoPage)
+    sleep(.5)
+    item[1] = ask("Item title")
+    if item[1] ~= "" then
+        local ans = ask("channels to control")
         if ans ~= nil then
-            for i in string.gmatch(ans, "%S+") do    -- Split channels
-                j = tonumber(i)
-                if j == nil then
-                    prtBad("Invalid input, aborting.")
-                    sleep(0.8)
-                    return
-                end
-                insert(t, j)    -- And insert them in the new table
+            for channel in gmatch(ans, "[^,]+") do
+                local vals = {}
+                vals[1] = tonumber(match(channel, "c(%d+)")) or false
+                vals[2] = tonumber(match(channel, "s(%d+)")) or false
+                vals[3] = tonumber(match(channel, "p(%d+)")) or false
+                if vals[1] and (vals[1] < 1 or vals[1] > 16) then vals[1] = false end
+                if vals[2] and (vals[2] < 0 or vals[2] > 5) then vals[2] = false end
+                if vals[3] and (vals[3] < 1 or vals[3] > 15) then vals[3] = false end
+                insert(item, vals)    -- Insert value table into item table
             end
-            insert(settings, t)    -- Insert new table into settings table
-            prtWarn("Item created successfully!")
-            sleep(0.3)
+            insert(settings, item)    -- Insert new item table into settings table
             saveSettings()    -- Dump settings from memory to disk
-        else
-            prtBad("Invalid input, aborting.")
+            prtWarn("Item created successfully!")
+            sleep(1)
         end
     end
-    sleep(0.7)
 end
 
 function remMenu()  -- Remove menu option
@@ -426,22 +436,19 @@ function remMenu()  -- Remove menu option
     end
 end
 
-function redInfo()  -- Print redstone info and channel states
+function redInfo()  -- Print redstone info and channel states/numbers
     clear()
     print(redInfoPage)
     color(0xFF00FF)
-    write("NUM\tCOLOR\t\tSTATE (")
-    for i = 0, 5, 1 do
-        write(sides[i] .. (i < 5 and ", " or ""))
-    end
-    print(")")
+    print("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")")
     color(0x0000FF)
     print("------------------------------")
-    for i = 1, 16, 1 do
-        prtWarn(i, true)
-        write("\t" .. colors[redMap(i)] .. "     \t")
-        for j = 0, 5, 1 do
-            colorState(getRed(redMap(i), j), true)
+    for channel = 1, 16, 1 do
+        prtWarn(channel, true)
+        write("\t" .. colorMap(redMap(channel)) .. "     \t")
+        for ctrlSide = 0, 5, 1 do
+            colorState(getRed(redMap(channel), ctrlSide), true)
+            if ctrlSide < 5 then write(", ") end
         end
         print()
     end
@@ -450,11 +457,12 @@ function redInfo()  -- Print redstone info and channel states
     waitEnter(true)
 end
 
-function itemInfo()   -- Print info
+function sideInfo()  -- Print available sides and their numbers
     clear()
-    prtHeader("--- Item info ---\n")
-    print(itemInfoPage)
-    sleep(.5)
+    print("Available sides:")
+    for i = 1, 6, 1 do
+        print("\t" .. i .. ". " .. sides[i-1])
+    end
     waitEnter(true)
 end
 
@@ -490,22 +498,20 @@ end
 function setSide()  -- Change redstone controlled side
     clear()
     print("From here you can choose which side should be used for redstone control.")
-    if multiSide then
-        prtWarn("This option is not available in multi-side mode!")
-        beep(150)
-        sleep(2)
-        beep(150)
-        return
-    end
     write("Currently using: [")
     prtWarn(sides[side], true)
     print("]\n\n")
-    local tmpSide = askSide()
-    if tmpSide then
-        side = tmpSide
-        redResume()
-        saveSettings()
-        prtWarn("Side configured.")
+    ans = ask("\nSide(1-6)")
+    if ans ~= nil then
+        ans = tonumber(ans)
+        if ans ~= nil and ans > 0 and ans < 7 then
+            side = ans - 1
+            redResume()
+            saveSettings()
+            prtWarn("Side configured.")
+        else
+            prtBad("Invalid choice.")
+        end
     end
     sleep(.7)
 end
@@ -543,14 +549,6 @@ function defaultsPrompt()  -- Replace settings with default ones
             break;
         end
     until ans == "n"
-end
-
-function toggleMultiSide()  -- Toggle multi-side mode
-    multiSide=not multiSide
-    saveSettings()
-    prtWarn("\nMulti-side mode " .. (multiSide and "enabled" or "disabled"))
-    beep(400, .04)
-    sleep(1.5)
 end
 
 function toggleBeep()  -- Toggle beeper
@@ -592,14 +590,13 @@ end
 function menuSettings()  -- Settings menu
     local func, ans = {
         {about, "About"},
-        {setPW, "Change password"},
-        {redInfo, "Redstone info"},
-        {itemInfo, "About menu items"},
+        {redInfo, "Redstone/channel info"},
+        {sideInfo, "Side info"},
         {addMenu, "Add menu item"},
         {remMenu, "Remove menu item"},
-        {setSide, "Change side"},
+        {setPW, "Change password"},
+        {setSide, "Change default side"},
         {setRes, "Change Resolution"},
-        {toggleMultiSide, (multiSide and "Disable" or "Enable") .. " multi-side mode"},
         {toggleBeep, (dobeep and "Mute" or "Unmute") .. " beeper"},
         {toggleService, (rc.loaded["secterm"] and "Disable" or "Enable") .. " startup service"},
         {defaultsPrompt, "Restore defaults"},
@@ -632,19 +629,17 @@ function menuSettings()  -- Settings menu
 end
 
 function onoff(opt)  -- Show component states, ask user for new state
-    local obj, ans
+    local ans
     clear()
     -- Show states
-    if #settings[opt] == 3 then
-        obj = redMap(settings[opt][3])
-        write("This component (" .. colors[obj] .. ") is currently ")
-        colorState(getRed(obj))
-    else
-        print("These components are currently:")
-        for j = 3, #settings[opt], 1 do
-            obj = redMap(settings[opt][j])
-            write("\t(" .. colors[obj] .. ")    \t")
-            colorState(getRed(obj))
+    print("These components are currently:")
+    for item = 2, #settings[opt], 1 do
+        for _ in item do
+            local c = settings[opt][item][1]
+            local s = settings[opt][item][2] or side
+            local mappedC = redMap(c)
+            write("\t" .. colorMap(mappedC) .. " (" .. sides[s] .. ")" .. ": ")
+            colorState(getRed(mappedC, s))
         end
     end
     sleep(.3)
@@ -657,9 +652,14 @@ function onoff(opt)  -- Show component states, ask user for new state
     ans = tonumber(ask("Enter your choice"))
     if ans == 1 or ans == 2 then
         ans = fmod(ans, 2)
-        for j = 3, #settings[opt], 1 do
-            obj = redMap(settings[opt][j])
-            setRed(obj, settings[opt][2], ans)
+        for item = 2, #settings[opt], 1 do
+            for _ in item do
+                local c = settings[opt][item][1]
+                local s = settings[opt][item][2] or side
+                local p = settings[opt][item][3] or 15
+                local mappedC = redMap(c)
+                setRed(mappedC, s, ans * p)
+            end
         end
         saveSettings()
     end
