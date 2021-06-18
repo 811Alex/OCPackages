@@ -53,6 +53,7 @@ local rcFile = "/etc/rc.d/secterm.lua"
 local logDir = "/var/log"
 local logFile = logDir .. "/secterm.log"
 local minRes = {80,25}
+local colorHex = {0xFFFFFF, 0xFFA500, 0xFF00FF, 0xADD8E6, 0xFFFF00, 0x00FF00, 0xFFC0CB, 0x808080, 0xC0C0C0, 0x00FFFF, 0x800080, 0x0000FF, 0x8B4513, 0x008000, 0xFF0000, 0xA9A9A9}
 local nativeRes = pack(gpu.getResolution())
 local helpPage = [[
         --- About SecTerm ---
@@ -125,10 +126,6 @@ function redMap(n)  -- Map enderIO color sequence to color API numbers (the tool
     end
 end
 
-function colorMap(n)
-    return n and colors[n] or "normal"
-end
-
 function colorState(b, --[[optional]]noNL)  -- Print a green "ON" or a red "OFF" according to the argument
     if b then
         prtGood("ON", noNL)
@@ -171,30 +168,38 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
-function prtColored(msg, msgColor, --[[optional]]noNL)
+function prtColoredMsg(msg, msgColor, --[[optional]]noNL)
     color(msgColor)
     write(msg .. (noNL and "" or "\n"))
     color(0xFFFFFF)
 end
 
+function prtColoredColor(n)
+    if n then
+        prtColoredMsg(colors[n], colorHex[n], true)
+    else
+        write("normal")
+    end
+end
+
 function prtGood(msg, --[[optional]]noNL)
-    prtColored(msg, 0x00FF00, noNL)
+    prtColoredMsg(msg, 0x00FF00, noNL)
 end
 
 function prtWarn(msg, --[[optional]]noNL)
-    prtColored(msg, 0xFFFF00, noNL)
+    prtColoredMsg(msg, 0xFFFF00, noNL)
 end
 
 function prtBad(msg, --[[optional]]noNL)
-    prtColored(msg, 0xFF0000, noNL)
+    prtColoredMsg(msg, 0xFF0000, noNL)
 end
 
 function prtPrompt(msg)
-    prtColored(msg, 0x99B2F2, false)
+    prtColoredMsg(msg, 0x99B2F2, false)
 end
 
 function prtHeader(msg)
-    prtColored(msg, 0x0000FF)
+    prtColoredMsg(msg, 0x0000FF)
 end
 
 function prtOpts(maxNum4Padding)  -- Print available options added by the user
@@ -435,11 +440,13 @@ end
 function redInfo()  -- Print redstone info and channel states/numbers
     clear()
     print(redInfoPage)
-    prtColored("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")", 0xFF00FF)
+    prtColoredMsg("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")", 0xFF00FF)
     print("------------------------------")
     for channel = 1, 16, 1 do
         prtWarn(channel, true)
-        write("\t" .. colorMap(redMap(channel)) .. "     \t")
+        write("\t")
+        prtColoredColor(redMap(channel))
+        write("     \t")
         for ctrlSide = 0, 5, 1 do
             colorState(getRed(redMap(channel), ctrlSide), true)
             if ctrlSide < 5 then write(", ") end
@@ -632,7 +639,9 @@ function onoff(opt)  -- Show component states, ask user for new state
             local c = settings[opt][item][1]
             local s = settings[opt][item][2] or side
             local mappedC = redMap(c)
-            write("\t" .. colorMap(mappedC) .. " (" .. sides[s] .. ")" .. ": ")
+            write("\t")
+            prtColoredColor(mappedC)
+            write(" (" .. sides[s] .. ")" .. ": ")
             colorState(getRed(mappedC, s))
         end
     end
