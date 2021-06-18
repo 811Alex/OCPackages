@@ -171,34 +171,30 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
-function prtGood(msg, --[[optional]]noNL)
-    color(0x00FF00)
+function prtColored(msg, msgColor, --[[optional]]noNL)
+    color(msgColor)
     write(msg .. (noNL and "" or "\n"))
     color(0xFFFFFF)
+end
+
+function prtGood(msg, --[[optional]]noNL)
+    prtColored(msg, 0x00FF00, noNL)
 end
 
 function prtWarn(msg, --[[optional]]noNL)
-    color(0xFFFF00)
-    write(msg .. (noNL and "" or "\n"))
-    color(0xFFFFFF)
+    prtColored(msg, 0xFFFF00, noNL)
 end
 
 function prtBad(msg, --[[optional]]noNL)
-    color(0xFF0000)
-    write(msg .. (noNL and "" or "\n"))
-    color(0xFFFFFF)
+    prtColored(msg, 0xFF0000, noNL)
 end
 
 function prtPrompt(msg)
-    color(0x99B2F2)
-    write(msg)
-    color(0xFFFFFF)
+    prtColored(msg, 0x99B2F2, false)
 end
 
 function prtHeader(msg)
-    color(0x0000FF)
-    print(msg)
-    color(0xFFFFFF)
+    prtColored(msg, 0x0000FF)
 end
 
 function prtOpts(maxNum4Padding)  -- Print available options added by the user
@@ -439,9 +435,7 @@ end
 function redInfo()  -- Print redstone info and channel states/numbers
     clear()
     print(redInfoPage)
-    color(0xFF00FF)
-    print("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")")
-    color(0x0000FF)
+    prtColored("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")", 0xFF00FF)
     print("------------------------------")
     for channel = 1, 16, 1 do
         prtWarn(channel, true)
