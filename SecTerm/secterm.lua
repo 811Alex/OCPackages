@@ -45,6 +45,7 @@ local side
 local dobeep
 local passwd
 local firstRun
+local multiSide
 -- const
 local settingsFile = "/etc/secterm.conf"
 local rcFile = "/etc/rc.d/secterm.lua"
@@ -126,11 +127,12 @@ function terminate()	--terminate execution
     beep(120, .3)
 end
 
-function loadSettings()--TODO generate file
+function loadSettings()
     local file = open(settingsFile, "r")
     passwd = data.decode64(file:read("*l"))
     firstRun = unserialize(file:read("*l"))
     dobeep = unserialize(file:read("*l"))
+    multiSide = unserialize(file:read("*l"))
     side = tonumber(unserialize(file:read("*l")))
     resolution = unserialize(file:read("*l"))
     redState = unserialize(file:read("*l"))
@@ -144,6 +146,7 @@ function saveSettings()
     file:write(data.encode64(passwd).."\n")
     file:write(serialize(firstRun) .. "\n")
     file:write(serialize(dobeep) .. "\n")
+    file:write(serialize(multiSide) .. "\n")
     file:write(serialize(side) .. "\n")
     file:write(serialize(resolution) .. "\n")
     file:write(serialize(redState) .. "\n")
@@ -190,6 +193,23 @@ end
 function waitEnter(--[[optional]]startWithNL)
     prtPrompt((startWithNL and "\n" or "") .. "Press Enter to continue...")
     read()
+end
+
+function askSide()
+    print("Available sides:")
+    for i = 1, 6, 1 do
+        print("\t" .. i .. ". " .. sides[i-1])
+    end
+    ans = ask("\nSide(1-6)")
+    if ans ~= nil then
+        ans = tonumber(ans)
+        if ans ~= nil and ans > 0 and ans < 7 then
+            return ans - 1
+        else
+            prtBad("Invalid choice.")
+            return false
+        end
+    end
 end
 
 function digitNum(num)
@@ -249,10 +269,10 @@ function getRed(obj) --Get digital redstone signal
     return (redstone.getBundledOutput(side, obj) > 0)
 end
 
-function setRed(obj, stateArg) --Set digital redstone signal
+function setRed(obj, ctrSide, stateArg) --Set digital redstone signal
     local state = stateArg * 15
     if getRed(obj) ~= (stateArg > 0) then	--if requested state is different than current
-        redstone.setBundledOutput(side, obj, state)	--set state
+        redstone.setBundledOutput(ctrSide, obj, state)	--set state
         redState[obj + 1] = stateArg	--save state to memory
         beep(stateArg > 0 and 520 or 420, .04)
     end
@@ -344,23 +364,29 @@ function addMenu()	--add new menu option
     local t, j, ans = {}
     clear()
     t[1] = ask("Item title")
-    ans = ask("channels to control")
-    if ans ~= nil then
-        for i in string.gmatch(ans, "%S+") do	--split channels
-            j = tonumber(i)
-            if j == nil then
-                prtBad("Invalid input, aborting.")
-                sleep(0.8)
-                return
-            end
-            insert(t, j)	--and insert them in the new table
-        end
-        insert(settings, t)	--insert new table into settings table
-        prtWarn("Item created successfully!")
-        sleep(0.3)
-        saveSettings()	--dump settings from memory to disk
+    local tmpSide = multiSide and askSide() or side
+    if not tmpSide then
+        prtBad("Invalid side, aborting.")
     else
-        prtBad("Invalid input, aborting.")
+        t[2] = tmpSide
+        ans = ask("channels to control")
+        if ans ~= nil then
+            for i in string.gmatch(ans, "%S+") do	--split channels
+                j = tonumber(i)
+                if j == nil then
+                    prtBad("Invalid input, aborting.")
+                    sleep(0.8)
+                    return
+                end
+                insert(t, j)	--and insert them in the new table
+            end
+            insert(settings, t)	--insert new table into settings table
+            prtWarn("Item created successfully!")
+            sleep(0.3)
+            saveSettings()	--dump settings from memory to disk
+        else
+            prtBad("Invalid input, aborting.")
+        end
     end
     sleep(0.7)
 end
@@ -451,27 +477,26 @@ function setSide()	--change redstone controlled side
     local ans
     clear()
     print("From here you can choose which side should be used for redstone control.")
+    if multiSide then
+        prtWarn("This option is not available in multi-side mode!")
+        beep(150)
+        sleep(2)
+        beep(150)
+        return
+    end
     write("Currently using: [")
     color(0xFFFF00)
     write(sides[side])
     color(0xFFFFFF)
-    print("]\n\nAvailable sides:")
-    for i = 1, 6, 1 do
-        print("\t" .. i .. ". " .. sides[i-1])
+    print("]\n\n")
+    local tmpSide = askSide()
+    if tmpSide then
+        side = tmpSide
+        redResume()
+        saveSettings()
+        prtWarn("Side configured.")
     end
-    ans = ask("\nSide(1-6)")
-    if ans ~= nil then
-        ans = tonumber(ans)
-        if ans ~= nil and ans > 0 and ans < 7 then
-            side = ans - 1
-            redResume()
-            saveSettings()
-            prtWarn("Side configured.")
-        else
-            prtBad("Invalid choice.")
-        end
-        sleep(.7)
-    end
+    sleep(.7)
 end
 
 function setDefaults()
@@ -508,6 +533,14 @@ function defaultsPrompt()	--replace files with default ones
             break;
         end
     until ans == "n"
+end
+
+function toggleMultiSide()
+    multiSide=not multiSide
+    saveSettings()
+    prtWarn("\nMulti-side mode " .. (multiSide and "enabled" or "disabled"))
+    beep(400, .04)
+    sleep(1.5)
 end
 
 function toggleBeep()	--toggle beeper
@@ -561,6 +594,7 @@ function menuSettings()	--settings menu
         {remMenu, "Remove menu item"},
         {setSide, "Change side"},
         {setRes, "Change Resolution"},
+        {toggleMultiSide, (multiSide and "Disable" or "Enable") .. " multi-side mode"},
         {toggleBeep, (dobeep and "Mute" or "Unmute") .. " beeper"},
         {toggleService, (rc.loaded["secterm"] and "Disable" or "Enable") .. " startup service"},
         {defaultsPrompt, "Restore defaults"},
@@ -595,13 +629,13 @@ end
 function onoff(opt)	--show component states, ask user for new state
     local obj, ans
     clear()
-    if #settings[opt] == 2 then
-        obj = redMap(settings[opt][2])
+    if #settings[opt] == 3 then
+        obj = redMap(settings[opt][3])
         write("This component (" .. colors[obj] .. ") is currently ")
         colorState(getRed(obj))
     else
         print("These components are currently:")
-        for j = 2, #settings[opt], 1 do
+        for j = 3, #settings[opt], 1 do
             obj = redMap(settings[opt][j])
             write("\t(" .. colors[obj] .. ")    \t")
             colorState(getRed(obj))
@@ -616,9 +650,9 @@ function onoff(opt)	--show component states, ask user for new state
     ans = tonumber(ask("Enter your choice"))
     if ans == 1 or ans == 2 then
         ans = fmod(ans, 2)
-        for j = 2, #settings[opt], 1 do
+        for j = 3, #settings[opt], 1 do
             obj = redMap(settings[opt][j])
-            setRed(obj, ans)
+            setRed(obj, settings[opt][2], ans)
         end
         saveSettings()
     end
