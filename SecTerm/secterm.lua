@@ -289,15 +289,25 @@ function getRed(channel, ctrlSide)  -- Get digital redstone signal
     return channel and (redstone.getBundledOutput(ctrlSide, channel) > 0) or (redstone.getOutput(ctrlSide) > 0)
 end
 
+function setRedState(ctrlSide, channel, power)
+    if not redState[ctrlSide] then redState[ctrlSide] = {} end
+    redState[ctrlSide][channel] = power
+end
+
+function getRedState(ctrlSide, channel)
+    return redState[ctrlSide] and redState[ctrlSide][channel] or nil
+end
+
 function setRed(channel, ctrlSide, power, --[[optional]]noSave)  -- Set redstone signal
     if not power then return end
-    if getRed(channel, ctrlSide) ~= (power > 0) then    -- If requested state is different than current
+    local s = ctrlSide or side
+    if getRed(channel, s) ~= (power > 0) then    -- If requested state is different than current
         if channel then
-            redstone.setBundledOutput(ctrlSide, channel, power)    -- Set state
-            if not noSave then redState[ctrlSide][channel + 1] = power end   -- Save state to memory
+            redstone.setBundledOutput(s, channel, power)    -- Set state
+            if not noSave then setRedState(s, channel + 1, power) end   -- Save state to memory
         else
-            redstone.setOutput(ctrlSide, power)    -- Set state
-            if not noSave then redState[ctrlSide][-1] = power end    -- Save state to memory
+            redstone.setOutput(s, power)    -- Set state
+            if not noSave then setRedState(s, -1, power) end    -- Save state to memory
         end
         beep(power > 0 and 520 or 420, .04)
     end
@@ -306,12 +316,10 @@ end
 function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
     for s = 0, 5, 1 do
-        if redState[s] then
-            for c = 0, 15, 1 do
-                setRed(c, s, redState[s][c], true)  -- Restore channels
-            end
-            setRed(false, s, redState[s][-1], true)  -- Restore normal redstone
+        for c = 0, 15, 1 do
+            setRed(c, s, getRedState(s, c), true)  -- Restore channels
         end
+        setRed(false, s, getRedState(s, -1), true)  -- Restore normal redstone
     end
 end
 
@@ -526,7 +534,7 @@ function setDefaults()
     dobeep = true
     side = 2
     resolution = {80, 25}
-    redState = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    redState = {}
     settings = {}
     saveSettings()
 end
@@ -633,7 +641,7 @@ function menuSettings()  -- Settings menu
 end
 
 function onoff(opt)  -- Show component states, ask user for new state
-    local ans
+    if not settings[opt] then return end
     clear()
     -- Show states
     print("These components are currently:")
@@ -655,7 +663,7 @@ function onoff(opt)  -- Show component states, ask user for new state
     print("2. Turn OFF")
     print("3. Nothing")
     sleep(.1)
-    ans = tonumber(ask("Enter your choice"))
+    local ans = tonumber(ask("Enter your choice"))
     if ans == 1 or ans == 2 then
         ans = fmod(ans, 2)
         for item = 2, #settings[opt], 1 do
