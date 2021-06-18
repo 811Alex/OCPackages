@@ -293,6 +293,7 @@ function checkHardware()	--test hardware compatibility
         sleep(.6)
     end
     color(0xFFFFFF)
+    clearln()
     terminate()
 end
 
