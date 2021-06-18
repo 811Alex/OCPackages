@@ -35,8 +35,8 @@ local read = term.read
 local clear = term.clear
 local clearln = term.clearLine
 -- global
-local terminateFlag = false	--terminate execution of main program
-local restartFlag = false	--restart after termination
+local terminateFlag = false    --terminate execution of main program
+local restartFlag = false    --restart after termination
 local errLog
 local settings
 local redState
@@ -54,7 +54,7 @@ local logFile = logDir .. "/secterm.log"
 local minRes = {80,25}
 local nativeRes = pack(gpu.getResolution())
 local helpPage = [[
-				--- About SecTerm ---
+        --- About SecTerm ---
 
 This program was initially developed by Alex811.
 The files used by this program are licenced under the MIT license (Expat).
@@ -62,17 +62,17 @@ You may use, distribute, modify, etc. this program as you see fit,
 but I would appreciate it if you gave me appropriate credit.
 
 Please keep in mind the following:
-	This program is designed to run on OpenComputers with:
-		a tier 2 or higher GPU,
-		a tier 2 or higher screen,
-		a tier 2 redstone card,
-		a tier 1 or higher data card,
-		enough memory.
-	This program is designed to be used with ProjectRed Bundled Cables.
-	It might work fine with RedPower2 or even EnderIO Redstone Conduits in some versions.
-	The default side used to control redstone is the back.
-	The default password is empty.
-	The only way to exit the program is through the settings menu.
+  This program is designed to run on OpenComputers with:
+    a tier 2 or higher GPU,
+    a tier 2 or higher screen,
+    a tier 2 redstone card,
+    a tier 1 or higher data card,
+    enough memory.
+  This program is designed to be used with ProjectRed Bundled Cables.
+  It might work fine with RedPower2 or even EnderIO Redstone Conduits in some versions.
+  The default side used to control redstone is the back.
+  The default password is empty.
+  The only way to exit the program is through the settings menu.
 ]]
 local redInfoPage = [[
 This program is designed to be used with ProjectRed Bundled Cables.
@@ -112,7 +112,7 @@ function redMap(n)  --map enderIO color sequence to color API numbers (the tool 
     return fmod((31 - n),16)
 end
 
-function colorState(b)	--print a green "ON" or a red "OFF" according to the argument
+function colorState(b)    --print a green "ON" or a red "OFF" according to the argument
     if b then
         prtGood("ON")
     else
@@ -120,7 +120,7 @@ function colorState(b)	--print a green "ON" or a red "OFF" according to the argu
     end
 end
 
-function terminate()	--terminate execution
+function terminate()    --terminate execution
     terminateFlag = true
     prtWarn("Terminating execution...")
     beep(500)
@@ -241,7 +241,7 @@ function readPW(prompt) -- reads password input and returns hash
     return input and data.sha256(text.trim(input)) or false
 end
 
-function verifyPW(prompt)	--check password
+function verifyPW(prompt)    --check password
     local input = readPW(prompt)
     color(0xe57fd8)
     for _ = 1, 5, 1 do
@@ -252,7 +252,7 @@ function verifyPW(prompt)	--check password
     return input == passwd
 end
 
-function setPW()	--change password
+function setPW()    --change password
     clear()
     local verifyCurr = verifyPW("Enter current password")
     if verifyCurr then
@@ -278,9 +278,9 @@ end
 
 function setRed(obj, ctrSide, stateArg) --Set digital redstone signal
     local state = stateArg * 15
-    if getRed(obj) ~= (stateArg > 0) then	--if requested state is different than current
-        redstone.setBundledOutput(ctrSide, obj, state)	--set state
-        redState[obj + 1] = stateArg	--save state to memory
+    if getRed(obj) ~= (stateArg > 0) then    --if requested state is different than current
+        redstone.setBundledOutput(ctrSide, obj, state)    --set state
+        redState[obj + 1] = stateArg    --save state to memory
         beep(stateArg > 0 and 520 or 420, .04)
     end
 end
@@ -292,14 +292,14 @@ function redResume()
     end
 end
 
-function checkHardware()	--test hardware compatibility
+function checkHardware()    --test hardware compatibility
     local w, h = gpu.maxResolution()
     print("Checking hardware...")
     if w >= resolution[1] and h >= resolution[2] then
         if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
             if component.isAvailable("redstone") then
                 if component.isAvailable("data") then
-                    return	--everything OK
+                    return    --everything OK
                 else
                     prtWarn("Data component not found.")
                 end
@@ -324,7 +324,7 @@ function checkHardware()	--test hardware compatibility
     terminate()
 end
 
-function init(...)	--initialize program and terminal
+function init(...)    --initialize program and terminal
     clear()
     event.shouldInterrupt = function() return false end
     print("Initializing...")
@@ -342,20 +342,20 @@ function init(...)	--initialize program and terminal
         if not fs.exists(settingsFile) then
             setDefaults()
         end
-        loadSettings()	--load to memory
+        loadSettings()    --load to memory
     else    -- fallback
         resolution = {80, 25}
         dobeep = true
     end
-    if firstRun then	--if first run, display about page
+    if firstRun then    --if first run, display about page
         about()
         clear()
     end
     checkHardware()
     if terminateFlag then return end
-    redResume()		--if hardware is ok, restore last redstone channel states
+    redResume()        --if hardware is ok, restore last redstone channel states
     print("Preparing...")
-    if firstRun then	--got through checks, don't display about on startup again
+    if firstRun then    --got through checks, don't display about on startup again
         firstRun = false
         saveSettings()
     end
@@ -367,7 +367,7 @@ function init(...)	--initialize program and terminal
     clear()
 end
 
-function addMenu()	--add new menu option
+function addMenu()    --add new menu option
     local t, j, ans = {}
     clear()
     t[1] = ask("Item title")
@@ -378,19 +378,19 @@ function addMenu()	--add new menu option
         t[2] = tmpSide
         ans = ask("channels to control")
         if ans ~= nil then
-            for i in string.gmatch(ans, "%S+") do	--split channels
+            for i in string.gmatch(ans, "%S+") do    --split channels
                 j = tonumber(i)
                 if j == nil then
                     prtBad("Invalid input, aborting.")
                     sleep(0.8)
                     return
                 end
-                insert(t, j)	--and insert them in the new table
+                insert(t, j)    --and insert them in the new table
             end
-            insert(settings, t)	--insert new table into settings table
+            insert(settings, t)    --insert new table into settings table
             prtWarn("Item created successfully!")
             sleep(0.3)
-            saveSettings()	--dump settings from memory to disk
+            saveSettings()    --dump settings from memory to disk
         else
             prtBad("Invalid input, aborting.")
         end
@@ -423,7 +423,7 @@ function remMenu()  --remove menu option
     end
 end
 
-function redInfo()	--print redstone info and channel states
+function redInfo()    --print redstone info and channel states
     clear()
     print(redInfoPage)
     color(0xFF00FF)
@@ -442,7 +442,7 @@ function redInfo()	--print redstone info and channel states
     waitEnter(true)
 end
 
-function itemInfo()	--print info
+function itemInfo()    --print info
     clear()
     prtHeader("--- Item info ---\n")
     print(itemInfoPage)
@@ -450,7 +450,7 @@ function itemInfo()	--print info
     waitEnter(true)
 end
 
-function setRes()	--change resolution
+function setRes()    --change resolution
     local w, h = unpack(resolution)
     local mw, mh = gpu.maxResolution()
     clear()
@@ -477,7 +477,7 @@ function setRes()	--change resolution
     end
 end
 
-function setSide()	--change redstone controlled side
+function setSide()    --change redstone controlled side
     local ans
     clear()
     print("From here you can choose which side should be used for redstone control.")
@@ -514,7 +514,7 @@ function setDefaults()
     saveSettings()
 end
 
-function defaultsPrompt()	--replace files with default ones
+function defaultsPrompt()    --replace files with default ones
     local ans
     clear()
     print("This will restore the default settings!")
@@ -547,7 +547,7 @@ function toggleMultiSide()
     sleep(1.5)
 end
 
-function toggleBeep()	--toggle beeper
+function toggleBeep()    --toggle beeper
     dobeep=not dobeep
     saveSettings()
     prtWarn("\nBeeper " .. (dobeep and "unmuted" or "muted"))
@@ -563,7 +563,7 @@ function toggleService()
     sleep(1.5)
 end
 
-function menuPrt()	--prints menu, returns number of options (excluding settings & exit)
+function menuPrt()    --prints menu, returns number of options (excluding settings & exit)
     clear()
     prtHeader("--- MENU ---\n")
     local settingsIndex = #settings + 1
@@ -585,7 +585,7 @@ function menuInvalid()
     prtPrompt("Enter your choice: ")
 end
 
-function menuSettings()	--settings menu
+function menuSettings()    --settings menu
     local func, ans = {
         {about, "About"},
         {setPW, "Change password"},
@@ -627,7 +627,7 @@ function menuSettings()	--settings menu
     end
 end
 
-function onoff(opt)	--show component states, ask user for new state
+function onoff(opt)    --show component states, ask user for new state
     local obj, ans
     clear()
     if #settings[opt] == 3 then
@@ -659,7 +659,7 @@ function onoff(opt)	--show component states, ask user for new state
     end
 end
 
-function menu()	--menu functionality
+function menu()    --menu functionality
     local onOffOptNum, ans
     sleep(.2)
     onOffOptNum = menuPrt()
@@ -671,14 +671,14 @@ function menu()	--menu functionality
             if ans ~= nil then
                 if ans <= 0 then
                     menuInvalid()
-                elseif ans <= onOffOptNum then		--on/off
+                elseif ans <= onOffOptNum then        --on/off
                     onoff(ans)
                     menuPrt()
-                elseif ans == onOffOptNum + 1 then			--settings
+                elseif ans == onOffOptNum + 1 then            --settings
                     menuSettings()
                     if terminateFlag then break end
                     onOffOptNum = menuPrt()
-                elseif ans == onOffOptNum + 2 then		--exit
+                elseif ans == onOffOptNum + 2 then        --exit
                     sleep(.2)
                     clear()
                     break;
@@ -689,7 +689,7 @@ function menu()	--menu functionality
                 menuInvalid()
             end
         else
-            break	--on ctrl+c
+            break    --on ctrl+c
         end
     end
 end
@@ -703,7 +703,7 @@ function main()
         sleep(.01)
         beep(500)
         sleep(.5)
-        menu()	--Menu--
+        menu()    --Menu--
         if terminateFlag then return end
         prtWarn("Exiting...\n")
         beep(500)
