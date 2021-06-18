@@ -128,7 +128,7 @@ end
 
 function loadSettings()--TODO generate file
     local file = open(settingsFile, "r")
-    if data then passwd = data.decode64(file:read("*l")) end
+    passwd = data.decode64(file:read("*l"))
     firstRun = unserialize(file:read("*l"))
     dobeep = unserialize(file:read("*l"))
     side = tonumber(unserialize(file:read("*l")))
@@ -141,7 +141,7 @@ end
 
 function saveSettings()
     local file = open(settingsFile, "w")
-    if data then file:write(data.encode64(passwd).."\n") end
+    file:write(data.encode64(passwd).."\n")
     file:write(serialize(firstRun) .. "\n")
     file:write(serialize(dobeep) .. "\n")
     file:write(serialize(side) .. "\n")
@@ -270,8 +270,8 @@ function checkHardware()	--test hardware compatibility
     print("Checking hardware...")
     if w >= resolution[1] and h >= resolution[2] then
         if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
-            if redstone then
-                if data then
+            if component.isAvailable("redstone") then
+                if component.isAvailable("data") then
                     return	--everything OK
                 else
                     prtWarn("Data component not found.")
@@ -310,10 +310,15 @@ function init(...)	--initialize program and terminal
         fs.makeDirectory(logDir)
     end
     errLog = open(logFile,"a")
-    if not fs.exists(settingsFile) then
-        setDefaults()
+    if redstone and data then
+        if not fs.exists(settingsFile) then
+            setDefaults()
+        end
+        loadSettings()	--load to memory
+    else    -- fallback
+        resolution = {80, 25}
+        dobeep = true
     end
-    loadSettings()	--load to memory
     if firstRun then	--if first run, display about page
         about()
         clear()
@@ -469,7 +474,7 @@ function setSide()	--change redstone controlled side
 end
 
 function setDefaults()
-    if data then passwd = data.sha256("") end
+    passwd = data.sha256("")
     firstRun = true
     dobeep = true
     side = 2
