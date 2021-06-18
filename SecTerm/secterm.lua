@@ -319,7 +319,8 @@ function checkHardware()  -- Test hardware compatibility and display errors (als
     local w, h = gpu.maxResolution()
     print("Checking hardware...")
     if w >= resolution[1] and h >= resolution[2] then
-        if gpu.setResolution(unpack(resolution)) or serialize(pack(gpu.getResolution())) == serialize(resolution) then
+        local currRes = pack(gpu.getResolution())
+        if gpu.setResolution(unpack(resolution)) or (currRes[1] == resolution[1] and currRes[2] == resolution[2]) then
             if component.isAvailable("redstone") then
                 if component.isAvailable("data") then
                     return  -- Everything OK
