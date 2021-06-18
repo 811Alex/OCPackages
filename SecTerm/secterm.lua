@@ -412,20 +412,17 @@ function remMenu()  -- Remove menu option
     else
         print("Available options:\n")
         prtOpts(#settings)
-        repeat
-            ans = tonumber(ask("\nWhich one would you like to remove? (0 to abort)"))
-            if ans ~=nil then
-                if ans < 0 or ans > #settings then
-                    prtBad("Invalid choice.")
-                elseif ans > 0 then
-                    remove(settings, ans)
-                    prtWarn("Item removed successfully!")
-                    saveSettings()
-                    sleep(1)
-                    break
-                end
+        ans = tonumber(ask("\nWhich one would you like to remove?"))
+        if ans ~=nil then
+            if ans <= 0 or ans > #settings then
+                prtBad("Invalid choice.")
+            else
+                remove(settings, ans)
+                prtWarn("Item removed successfully!")
+                saveSettings()
             end
-        until ans == 0
+            sleep(1)
+        end
     end
 end
 
