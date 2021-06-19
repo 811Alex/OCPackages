@@ -330,6 +330,16 @@ function setRed(channel, ctrlSide, power, --[[optional]]noSave)  -- Set redstone
     end
 end
 
+function setRedAll(settingsIndex, power)
+    for item = 2, #settings[settingsIndex], 1 do
+        local c = settings[settingsIndex][item][1]
+        local s = settings[settingsIndex][item][2] or side
+        local p = settings[settingsIndex][item][3] or 15
+        local mappedC = redMap(c)
+        setRed(mappedC, s, power)
+    end
+end
+
 function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
     for s = 0, 5, 1 do
@@ -457,6 +467,7 @@ function remMenu()  -- Remove menu option
             if ans <= 0 or ans > #settings then
                 prtBad("Invalid choice.")
             else
+                setRedAll(ans, 0)
                 remove(settings, ans)
                 prtWarn("Item removed successfully!")
                 saveSettings()
@@ -682,13 +693,7 @@ function onoff(opt)  -- Show component states, ask user for new state
     local ans = tonumber(ask("Enter your choice"))
     if ans == 1 or ans == 2 then
         ans = fmod(ans, 2)
-        for item = 2, #settings[opt], 1 do
-            local c = settings[opt][item][1]
-            local s = settings[opt][item][2] or side
-            local p = settings[opt][item][3] or 15
-            local mappedC = redMap(c)
-            setRed(mappedC, s, ans * p)
-        end
+        setRedAll(opt, ans * p)
         saveSettings()
     end
 end
