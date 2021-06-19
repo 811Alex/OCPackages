@@ -661,36 +661,32 @@ function onoff(opt)  -- Show component states, ask user for new state
     if not settings[opt] then return end
     clear()
     -- Show states
-    print("These components are currently:")
+    print("Current component states:\n")
     for item = 2, #settings[opt], 1 do
-        for _ in item do
-            local c = settings[opt][item][1]
-            local s = settings[opt][item][2] or side
-            local mappedC = redMap(c)
-            write("\t")
-            prtColoredColor(mappedC)
-            write(" (" .. sides[s] .. ")" .. ": ")
-            colorState(getRed(mappedC, s))
-        end
+        local c = settings[opt][item][1]
+        local s = settings[opt][item][2] or side
+        local mappedC = redMap(c)
+        write("\t")
+        prtColoredColor(mappedC)
+        write(" (" .. sides[s] .. ")" .. ": ")
+        colorState(getRed(mappedC, s))
     end
     sleep(.3)
     -- Show menu
     print("\nWhat do you want to do?\n")
     print("1. Turn ON")
     print("2. Turn OFF")
-    print("3. Nothing")
+    print("3. Nothing\n")
     sleep(.1)
     local ans = tonumber(ask("Enter your choice"))
     if ans == 1 or ans == 2 then
         ans = fmod(ans, 2)
         for item = 2, #settings[opt], 1 do
-            for _ in item do
-                local c = settings[opt][item][1]
-                local s = settings[opt][item][2] or side
-                local p = settings[opt][item][3] or 15
-                local mappedC = redMap(c)
-                setRed(mappedC, s, ans * p)
-            end
+            local c = settings[opt][item][1]
+            local s = settings[opt][item][2] or side
+            local p = settings[opt][item][3] or 15
+            local mappedC = redMap(c)
+            setRed(mappedC, s, ans * p)
         end
         saveSettings()
     end
