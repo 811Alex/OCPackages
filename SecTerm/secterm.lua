@@ -176,7 +176,7 @@ end
 
 function prtColoredColor(n)
     if n then
-        prtColoredMsg(colors[n], colorHex[n], true)
+        prtColoredMsg(colors[n], colorHex[n + 1], true)
     else
         write("normal")
     end
@@ -195,7 +195,7 @@ function prtBad(msg, --[[optional]]noNL)
 end
 
 function prtPrompt(msg)
-    prtColoredMsg(msg, 0x99B2F2, false)
+    prtColoredMsg(msg, 0x99B2F2, true)
 end
 
 function prtHeader(msg)
