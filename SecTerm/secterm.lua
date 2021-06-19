@@ -29,6 +29,7 @@ local remove = table.remove
 local match = string.match
 local gmatch = string.gmatch
 local find = string.find
+local gsub = string.gsub
 local fmod = math.fmod
 local floor = math.floor
 local log = math.log
@@ -222,7 +223,7 @@ end
 function prtOpts(maxNum4Padding)  -- Print available options added by the user
     for i = 1, #settings, 1 do
         sleep(.05)
-        write(i .. ". " .. getPadding(i, maxNum4Padding) .. settings[i][1])
+        print(i .. ". " .. getPadding(i, maxNum4Padding) .. settings[i][1])
     end
 end
 
@@ -230,7 +231,7 @@ function coloredRead(...)
     color(0xFFAA00)
     local input = read(...)
     color(0xFFFFFF)
-    return input
+    return gsub(input, "\n", "")
 end
 
 function ask(prompt)
