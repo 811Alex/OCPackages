@@ -170,13 +170,13 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
-function isTermBottom()
+function isTermBottom()  -- cursor is at the bottom of the terminal
     return pack(getCursor())[2] == pack(getResolution())[2]
 end
 
-function prtHR()
+function prtHR()  -- print horizontal line, the width of the terminal
     local hr = ""
-    for i = 1, pack(getResolution())[1], 1 do
+    for _ = 1, pack(getResolution())[1], 1 do
         hr = hr .. "-"
     end
     print(hr)
@@ -566,7 +566,7 @@ function setSide()  -- Change redstone controlled side
     sleep(.7)
 end
 
-function setDefaults()
+function setDefaults()  -- Replace settings with default ones
     passwd = data.sha256("")
     firstRun = true
     dobeep = true
@@ -577,7 +577,7 @@ function setDefaults()
     saveSettings()
 end
 
-function defaultsPrompt()  -- Replace settings with default ones
+function defaultsPrompt()  -- Prompt user to replace settings with default ones
     local ans
     clear()
     prtHeader("restore defaults")
