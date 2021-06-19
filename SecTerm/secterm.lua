@@ -172,6 +172,14 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
+function prtHR()
+    local hr = ""
+    for i = 1, pack(getResolution())[1], 1 do
+        hr = hr .. "-"
+    end
+    print(hr)
+end
+
 function prtColoredMsg(msg, msgColor, --[[optional]]noNL)
     color(msgColor)
     write(msg .. (noNL and "" or "\n"))
@@ -460,7 +468,7 @@ function redInfo()  -- Print redstone info and channel states/numbers
     clear()
     print(redInfoPage)
     prtColoredMsg("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")", 0xFF00FF)
-    print("------------------------------")
+    prtHR()
     for channel = 1, 16, 1 do
         prtWarn(channel, true)
         write("\t")
@@ -479,9 +487,9 @@ end
 
 function sideInfo()  -- Print available sides and their numbers
     clear()
-    print("Available sides:")
+    print("Available sides:\n")
     for i = 1, 6, 1 do
-        print("\t" .. i .. ". " .. sides[i-1])
+        print(i .. ". " .. sides[i-1])
     end
     waitEnter(true)
 end
@@ -520,7 +528,7 @@ function setSide()  -- Change redstone controlled side
     print("From here you can choose which side should be used for redstone control.")
     write("Currently using: [")
     prtWarn(sides[side], true)
-    print("]\n\n")
+    print("]\n")
     ans = ask("\nSide(1-6)")
     if ans ~= nil then
         ans = tonumber(ans)
