@@ -477,7 +477,7 @@ function redInfo()  -- Print redstone info and channel states/numbers
         write("     \t")
         for ctrlSide = 0, 5, 1 do
             colorState(getRed(redMap(channel), ctrlSide), true)
-            if ctrlSide < 5 then write(", ") end
+            if ctrlSide < 5 then write("\t") end
         end
         print()
     end
