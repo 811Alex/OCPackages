@@ -143,7 +143,7 @@ end
 function terminate(--[[optional]]restart)  -- Terminate execution
     terminateFlag = true
     restartFlag = restart or false
-    prtWarn("Terminating execution" .. (restart and "(restarting)" or "") .. "...")
+    prtWarn("Terminating execution" .. (restart and " (restarting)" or "") .. "...")
     beep(500)
     beep(120, .3)
 end
