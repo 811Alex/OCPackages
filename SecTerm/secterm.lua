@@ -43,6 +43,8 @@ local unserialize = serialization.unserialize
 local read = term.read
 local clear = term.clear
 local clearln = term.clearLine
+local getCursor = term.getCursor
+local trim = text.trim
 -- Global
 local terminateFlag = false  -- True = terminate execution of main program
 local restartFlag = false    -- True = restart after termination
@@ -168,6 +170,10 @@ function saveSettings()  -- Save settings file from memory
     prtWarn("Settings saved!")
 end
 
+function isTermBottom()
+    return pack(getCursor())[2] == pack(getResolution())[2]
+end
+
 function prtHR()
     local hr = ""
     for i = 1, pack(getResolution())[1], 1 do
@@ -228,9 +234,9 @@ function coloredRead(...)
     return input
 end
 
-function ask(prompt)
+function ask(prompt, --[[optional]]noNL)
     prtPrompt(prompt .. ": ")
-    return coloredRead()
+    return coloredRead({}, not noNL)
 end
 
 function waitEnter(--[[optional]]startWithNL)
@@ -575,11 +581,11 @@ function defaultsPrompt()  -- Replace settings with default ones
     local ans
     clear()
     prtHeader("restore defaults")
-    print("This will restore the default settings!")
+    print("This will restore the default settings!\n")
     beep(120, .5)
     repeat
-        ans = ask("Are you sure you want to proceed (y/n)")
-        ans=text.trim(ans ~= nil and ans or "n")
+        ans = ask("Are you sure you want to proceed (y/n)", true)
+        ans=trim(ans ~= nil and ans or "n")
         if ans == "y" then
             clear()
             print("Resetting settings...")
@@ -592,6 +598,11 @@ function defaultsPrompt()  -- Replace settings with default ones
             waitEnter()
             terminate(true) -- Restart program
             break;
+        elseif ans ~= "n" then
+            clearln()
+            prtBad("Invalid choice.", true)
+            sleep(.7)
+            clearln()
         end
     until ans == "n"
 end
@@ -626,6 +637,7 @@ function menuPrt()  -- Prints menu, returns number of options (excluding setting
 end
 
 function menuInvalid()  -- Print invalid choice error
+    clearln()
     prtBad("Invalid choice.", true)
     sleep(.7)
     clearln()
@@ -699,6 +711,9 @@ function onoff(opt)  -- Show component states, ask user for new state
     if ans == 1 or ans == 2 then
         setRedAll(opt, ans == 1)
         saveSettings()
+    elseif ans ~= 3 then
+        prtBad("Invalid choice.")
+        sleep(.7)
     end
 end
 
@@ -708,7 +723,7 @@ function menu()  -- Menu functionality
     onOffOptNum = menuPrt()
     while true do
         ans = -1
-        ans = coloredRead()
+        ans = coloredRead({}, false)
         if ans ~= nil then
             ans = tonumber(ans)
             if ans ~= nil then
@@ -741,27 +756,34 @@ end
 --- Main program ---
 function main()
     prtHeader("secterm")
-    if verifyPW("Password required") then
-        prtGood("Access granted.")
-        beep(380)
-        sleep(.01)
-        beep(500)
-        sleep(.5)
-        menu()    -- Menu
-        if terminateFlag then return end
-        prtWarn("Exiting...\n")
-        beep(500)
-        sleep(.01)
-        beep(380)
-        sleep(.8)
-        clear()
-    else
-        prtBad("Wrong password.\n")
-        beep(150)
-        sleep(.01)
-        beep(150)
+    while true do
+        if verifyPW("Password required") then
+            prtGood("Access granted.")
+            beep(380)
+            sleep(.01)
+            beep(500)
+            sleep(.5)
+            menu()    -- Menu
+            if terminateFlag then return end
+            prtWarn("Exiting...\n")
+            beep(500)
+            sleep(.01)
+            beep(380)
+            sleep(.8)
+            clear()
+            prtHeader("secterm")
+        else
+            prtBad("Wrong password.\n")
+            beep(150)
+            sleep(.01)
+            beep(150)
+            if isTermBottom() then
+                clear()
+                prtHeader("secterm")
+            end
+        end
+        sleep(.2)
     end
-    sleep(.2)
 end
 
 function errorHandler(err)  -- Log error & traceback
