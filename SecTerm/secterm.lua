@@ -623,19 +623,6 @@ function toggleService()  -- Enable/disable service (run on startup)
     sleep(1.5)
 end
 
-function menuPrt()  -- Prints menu, returns number of options (excluding settings & exit)
-    clear()
-    prtHeader("menu")
-    local settingsIndex = #settings + 1
-    local exitIndex = settingsIndex + 1
-    prtOpts(exitIndex)
-    sleep(.05)
-    print(settingsIndex .. ". " .. getPadding(settingsIndex, exitIndex) .. "Settings")
-    print(exitIndex .. ". " .. getPadding(exitIndex, exitIndex) .. "Exit\n")
-    prtPrompt("Enter your choice: ")
-    return #settings
-end
-
 function menuInvalid()  -- Print invalid choice error
     clearln()
     prtBad("Invalid choice.", true)
@@ -644,11 +631,35 @@ function menuInvalid()  -- Print invalid choice error
     prtPrompt("Enter your choice: ")
 end
 
+function menuFromTable(menuTable, header, prompt)  -- menu logic for settings/info menu
+    clear()
+    prtHeader(header)
+    sleep(.4)
+    print(prompt .. "\n")
+    local backIndex = #menuTable + 1
+    for i = 1, #menuTable, 1 do
+        print(i .. ". " .. getPadding(i, backIndex) .. menuTable[i][2])
+    end
+    print(backIndex .. ". " .. getPadding(backIndex, backIndex) .. "Back\n")
+    sleep(.1)
+    local ans = ask("Enter your choice")
+    if ans ~= nil then
+        ans = tonumber(ans)
+        if ans ~= nil then
+            if ans > 0 and ans <= #menuTable then
+                menuTable[ans][1]()  -- Exec option
+                return
+            elseif ans == #menuTable + 1 then  -- Back
+                return
+            end
+        end
+        prtBad("Invalid choice.")
+        sleep(.7)
+    end
+end
+
 function menuSettings()  -- Settings menu
-    local func, ans = {
-        {about, "About"},
-        {redInfo, "Redstone/channel info"},
-        {sideInfo, "Side info"},
+    local func = {
         {addMenu, "Add menu item"},
         {remMenu, "Remove menu item"},
         {setPW, "Change password"},
@@ -659,30 +670,16 @@ function menuSettings()  -- Settings menu
         {defaultsPrompt, "Restore defaults"},
         {terminate, "Terminate execution"}
     }
-    clear()
-    prtHeader("settings")
-    sleep(.4)
-    print("What do you want to do?\n")
-    local backIndex = #func + 1
-    for i = 1, #func, 1 do
-        print(i .. ". " .. getPadding(i, backIndex) .. func[i][2])
-    end
-    print(backIndex .. ". " .. getPadding(backIndex, backIndex) .. "Back\n")
-    sleep(.1)
-    ans = ask("Enter your choice")
-    if ans ~= nil then
-        ans = tonumber(ans)
-        if ans ~= nil then
-            if ans > 0 and ans <= #func then
-                func[ans][1]()  -- Exec option
-                return
-            elseif ans == #func + 1 then  -- Back
-                return
-            end
-        end
-        prtBad("Invalid choice.")
-        sleep(.7)
-    end
+    menuFromTable(func, "settings", "What do you want to do?")
+end
+
+function menuInfo()  -- Info menu
+    local func = {
+        {about, "About"},
+        {redInfo, "Redstone/channel info"},
+        {sideInfo, "Side info"}
+    }
+    menuFromTable(func, "info", "What do you want to show?")
 end
 
 function onoff(opt)  -- Show component states, ask user for new state
@@ -717,6 +714,21 @@ function onoff(opt)  -- Show component states, ask user for new state
     end
 end
 
+function menuPrt()  -- Prints menu, returns number of options (excluding settings & exit)
+    clear()
+    prtHeader("menu")
+    local infoIndex = #settings + 1
+    local settingsIndex = infoIndex + 1
+    local exitIndex = settingsIndex + 1
+    prtOpts(exitIndex)
+    sleep(.05)
+    print(infoIndex .. ". " .. getPadding(infoIndex, exitIndex) .. "Info")
+    print(settingsIndex .. ". " .. getPadding(settingsIndex, exitIndex) .. "Settings")
+    print(exitIndex .. ". " .. getPadding(exitIndex, exitIndex) .. "Exit\n")
+    prtPrompt("Enter your choice: ")
+    return #settings
+end
+
 function menu()  -- Menu functionality
     local onOffOptNum, ans
     sleep(.2)
@@ -732,11 +744,13 @@ function menu()  -- Menu functionality
                 elseif ans <= onOffOptNum then        -- On/Off
                     onoff(ans)
                     menuPrt()
-                elseif ans == onOffOptNum + 1 then    -- Settings
+                elseif ans == onOffOptNum + 1 then    -- Info
+                    menuInfo()
+                elseif ans == onOffOptNum + 2 then    -- Settings
                     menuSettings()
                     if terminateFlag then break end
                     onOffOptNum = menuPrt()
-                elseif ans == onOffOptNum + 2 then    -- Exit
+                elseif ans == onOffOptNum + 3 then    -- Exit
                     sleep(.2)
                     clear()
                     break;
