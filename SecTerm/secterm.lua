@@ -746,6 +746,7 @@ function menu()  -- Menu functionality
                     menuPrt()
                 elseif ans == onOffOptNum + 1 then    -- Info
                     menuInfo()
+                    menuPrt()
                 elseif ans == onOffOptNum + 2 then    -- Settings
                     menuSettings()
                     if terminateFlag then break end
