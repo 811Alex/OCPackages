@@ -344,7 +344,7 @@ end
 function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
     for s = 0, 5, 1 do
-        for c = 0, 15, 1 do
+        for c = 1, 16, 1 do
             setRed(c, s, getRedState(s, c), true)  -- Restore channels
         end
         setRed(false, s, getRedState(s, -1), true)  -- Restore normal redstone
