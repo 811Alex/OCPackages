@@ -304,20 +304,20 @@ function setPW()  -- Change password
     sleep(1.5)
 end
 
-function getRed(channel, ctrlSide)  -- Get digital redstone signal
+function getRed(channel, ctrlSide)  -- Get digital redstone signal (channel is 0-15)
     return channel and (redstone.getBundledOutput(ctrlSide, channel) > 0) or (redstone.getOutput(ctrlSide) > 0)
 end
 
-function setRedState(ctrlSide, channel, power)
+function setRedState(ctrlSide, channel, power) -- set redState safely (channel is 1-16)
     if not redState[ctrlSide] then redState[ctrlSide] = {} end
     redState[ctrlSide][channel] = power
 end
 
-function getRedState(ctrlSide, channel)
+function getRedState(ctrlSide, channel) -- get redState safely (channel is 1-16)
     return redState[ctrlSide] and redState[ctrlSide][channel] or nil
 end
 
-function setRed(channel, ctrlSide, power, --[[optional]]noSave)  -- Set redstone signal
+function setRed(channel, ctrlSide, power, --[[optional]]noSave)  -- Set redstone signal (channel is 0-15)
     if not power then return end
     local s = ctrlSide or side
     if getRed(channel, s) ~= (power > 0) then    -- If requested state is different than current
@@ -346,7 +346,7 @@ function redResume()  -- Set redstone states from memory
     print("Restoring redstone states...")
     for s = 0, 5, 1 do
         for c = 1, 16, 1 do
-            setRed(c, s, getRedState(s, c), true)  -- Restore channels
+            setRed(c - 1, s, getRedState(s, c), true)  -- Restore channels
         end
         setRed(false, s, getRedState(s, -1), true)  -- Restore normal redstone
     end
