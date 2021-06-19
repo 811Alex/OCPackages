@@ -509,7 +509,7 @@ function setRes()  -- Change resolution
         w = tonumber(w)
         h = tonumber(h)
         if w ~= nil and h ~= nil then
-            if w > minRes[1] and h > minRes[2] and w <= mw and h <= mh then
+            if w >= minRes[1] and h >= minRes[2] and w <= mw and h <= mh then
                 if setResolution(w, h) then
                     resolution = pack(getResolution())
                     saveSettings()
