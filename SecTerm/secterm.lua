@@ -431,8 +431,9 @@ function addMenu()  -- Add new menu option
                 vals[2] = tonumber(match(channel, "s(%d+)")) or false
                 vals[3] = tonumber(match(channel, "p(%d+)")) or false
                 if vals[1] and (vals[1] < 1 or vals[1] > 16) then vals[1] = false end
-                if vals[2] and (vals[2] < 0 or vals[2] > 5) then vals[2] = false end
+                if vals[2] and (vals[2] < 1 or vals[2] > 6) then vals[2] = false end
                 if vals[3] and (vals[3] < 1 or vals[3] > 15) then vals[3] = false end
+                if vals[2] then vals[2] = vals[2] - 1 end
                 insert(item, vals)    -- Insert value table into item table
             end
             insert(settings, item)    -- Insert new item table into settings table
