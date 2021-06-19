@@ -231,7 +231,7 @@ function coloredRead(...)
     color(0xFFAA00)
     local input = read(...)
     color(0xFFFFFF)
-    return gsub(input, "\n", "")
+    return input
 end
 
 function ask(prompt)
@@ -433,7 +433,8 @@ function addMenu()  -- Add new menu option
     print(itemInfoPage)
     sleep(.5)
     item[1] = ask("Item title")
-    if find(item[1], "%S") then
+    if find(item[1], "%S") then  -- not empty
+        item[1] = gsub(item[1], "\n", "")  -- remove the new line at the end
         local ans = ask("channels to control")
         if ans ~= nil then
             for channel in gmatch(ans, "[^,]+") do
