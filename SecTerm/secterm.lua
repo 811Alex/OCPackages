@@ -30,6 +30,7 @@ local match = string.match
 local gmatch = string.gmatch
 local find = string.find
 local gsub = string.gsub
+local upper = string.upper
 local fmod = math.fmod
 local floor = math.floor
 local log = math.log
@@ -62,8 +63,6 @@ local minRes = {80,25}
 local colorHex = {0xFFFFFF, 0xFFA500, 0xFF00FF, 0xADD8E6, 0xFFFF00, 0x00FF00, 0xFFC0CB, 0x808080, 0xC0C0C0, 0x00FFFF, 0x800080, 0x0000FF, 0x8B4513, 0x008000, 0xFF0000, 0xA9A9A9}
 local nativeRes = pack(getResolution())
 local helpPage = [[
-        --- About SecTerm ---
-
 This program was initially developed by Alex811.
 The files used by this program are licenced under the MIT license (Expat).
 You may use, distribute, modify, etc. this program as you see fit,
@@ -82,12 +81,6 @@ Please keep in mind the following:
   The default side used to control redstone is the back.
   The default password is empty.
   The only way to exit the program is through the settings menu.
-]]
-local redInfoPage = [[
-This program is designed to be used with ProjectRed Bundled Cables.
-When you create a menu item, you choose which channel it will control
-using numbers (1-16). Each number matches a channel color.
-Here are the channel colors, their numbers and their current state:
 ]]
 local itemInfoPage = [[
 Each item controls one or more ProjectRed Bundled Cable channel (color).
@@ -113,6 +106,7 @@ end
 --- Functions ---
 function about()
     clear()
+    prtHeader("about secterm")
     print(helpPage)
     sleep(.5)
     waitEnter()
@@ -217,7 +211,7 @@ function prtPrompt(msg)
 end
 
 function prtHeader(msg)
-    prtColoredMsg(msg, 0x0000FF)
+    prtColoredMsg("--- " .. upper(msg) .. " ---\n", 0x0000FF)
 end
 
 function prtOpts(maxNum4Padding)  -- Print available options added by the user
@@ -285,6 +279,7 @@ end
 
 function setPW()  -- Change password
     clear()
+    prtHeader("change password")
     local verifyCurr = verifyPW("Enter current password")
     if verifyCurr then
         local input = readPW("New password")
@@ -430,6 +425,7 @@ end
 function addMenu()  -- Add new menu option
     local item = {}
     clear()
+    prtHeader("add menu item")
     print(itemInfoPage)
     sleep(.5)
     item[1] = ask("Item title")
@@ -459,6 +455,7 @@ end
 function remMenu()  -- Remove menu option
     local ans
     clear()
+    prtHeader("remove menu item")
     if #settings == 0 then
         prtBad("Nothing to remove.")
     else
@@ -481,7 +478,8 @@ end
 
 function redInfo()  -- Print redstone info and channel states/numbers
     clear()
-    print(redInfoPage)
+    prtHeader("Redstone/channel info")
+    print("Here are the channel colors, their numbers and their current state:\n")
     prtColoredMsg("NUM\tCOLOR\t\tSTATE (" .. sideListStr() .. ")", 0xFF00FF)
     prtHR()
     for channel = 1, 16, 1 do
@@ -502,6 +500,7 @@ end
 
 function sideInfo()  -- Print available sides and their numbers
     clear()
+    prtHeader("side info")
     print("Available sides:\n")
     for i = 1, 6, 1 do
         print(i .. ". " .. sides[i-1])
@@ -513,6 +512,7 @@ function setRes()  -- Change resolution
     local w, h = unpack(resolution)
     local mw, mh = maxResolution()
     clear()
+    prtHeader("change resolution")
     print("The resolution has to be at least " .. minRes[1] .. "x" .. minRes[2] .. ".")
     print("The resolution has to be at most " .. floor(mw) .. "x" .. floor(mh) .. ".")
     write("Current resolution: ")
@@ -540,11 +540,12 @@ end
 
 function setSide()  -- Change redstone controlled side
     clear()
-    print("From here you can choose which side should be used for redstone control.")
+    prtHeader("change default side")
+    print("From here you can choose the default side to be used for redstone control.")
     write("Currently using: [")
     prtWarn(sides[side], true)
     print("]\n")
-    ans = ask("\nSide(1-6)")
+    ans = ask("Side(1-6)")
     if ans ~= nil then
         ans = tonumber(ans)
         if ans ~= nil and ans > 0 and ans < 7 then
@@ -573,6 +574,7 @@ end
 function defaultsPrompt()  -- Replace settings with default ones
     local ans
     clear()
+    prtHeader("restore defaults")
     print("This will restore the default settings!")
     beep(120, .5)
     repeat
@@ -612,7 +614,7 @@ end
 
 function menuPrt()  -- Prints menu, returns number of options (excluding settings & exit)
     clear()
-    prtHeader("--- MENU ---\n")
+    prtHeader("menu")
     local settingsIndex = #settings + 1
     local exitIndex = settingsIndex + 1
     prtOpts(exitIndex)
@@ -646,7 +648,7 @@ function menuSettings()  -- Settings menu
         {terminate, "Terminate execution"}
     }
     clear()
-    prtHeader("--- SETTINGS ---")
+    prtHeader("settings")
     sleep(.4)
     print("What do you want to do?\n")
     local backIndex = #func + 1
@@ -674,6 +676,7 @@ end
 function onoff(opt)  -- Show component states, ask user for new state
     if not settings[opt] then return end
     clear()
+    prtHeader(settings[opt][1])
     -- Show states
     print("Current component states:\n")
     for item = 2, #settings[opt], 1 do
@@ -737,6 +740,7 @@ end
 
 --- Main program ---
 function main()
+    prtHeader("secterm")
     if verifyPW("Password required") then
         prtGood("Access granted.")
         beep(380)
