@@ -28,6 +28,7 @@ local insert = table.insert
 local remove = table.remove
 local match = string.match
 local gmatch = string.gmatch
+local find = string.find
 local fmod = math.fmod
 local floor = math.floor
 local log = math.log
@@ -421,7 +422,7 @@ function addMenu()  -- Add new menu option
     print(itemInfoPage)
     sleep(.5)
     item[1] = ask("Item title")
-    if item[1] ~= "" then
+    if find(item[1], "%S") then
         local ans = ask("channels to control")
         if ans ~= nil then
             for channel in gmatch(ans, "[^,]+") do
@@ -459,9 +460,9 @@ function remMenu()  -- Remove menu option
                 prtWarn("Item removed successfully!")
                 saveSettings()
             end
-            sleep(1)
         end
     end
+    sleep(1)
 end
 
 function redInfo()  -- Print redstone info and channel states/numbers
