@@ -15,6 +15,10 @@ local gpu = component.gpu
 local data = component.isAvailable("data") and component.data or nil
 local redstone = component.isAvailable("redstone") and component.redstone or nil
 local color = gpu.setForeground
+local getResolution = gpu.getResolution
+local setResolution = gpu.setResolution
+local maxResolution = gpu.maxResolution
+local getDepth = gpu.getDepth
 local sleep = os.sleep
 local write = io.write
 local open = io.open
@@ -54,7 +58,7 @@ local logDir = "/var/log"
 local logFile = logDir .. "/secterm.log"
 local minRes = {80,25}
 local colorHex = {0xFFFFFF, 0xFFA500, 0xFF00FF, 0xADD8E6, 0xFFFF00, 0x00FF00, 0xFFC0CB, 0x808080, 0xC0C0C0, 0x00FFFF, 0x800080, 0x0000FF, 0x8B4513, 0x008000, 0xFF0000, 0xA9A9A9}
-local nativeRes = pack(gpu.getResolution())
+local nativeRes = pack(getResolution())
 local helpPage = [[
         --- About SecTerm ---
 
@@ -65,9 +69,9 @@ but I would appreciate it if you gave me appropriate credit.
 
 Please keep in mind the following:
   This program is designed to run on OpenComputers with:
-    a tier 2 or higher GPU,
-    a tier 2 or higher screen,
-    a tier 2 redstone card,
+    a tier 2 or higher GPU (tier 3 recommended),
+    a tier 2 or higher screen (a big one for the best experience ^-^),
+    a tier 2 redstone card (bundled cables won't work with tier 1),
     a tier 1 or higher data card,
     enough memory.
   This program is designed to be used with ProjectRed Bundled Cables.
@@ -176,7 +180,11 @@ end
 
 function prtColoredColor(n)
     if n then
-        prtColoredMsg(colors[n], colorHex[n + 1], true)
+        if getDepth() < 8 then
+            write(colors[n])
+        else
+            prtColoredMsg(colors[n], colorHex[n + 1], true)
+        end
     else
         write("normal")
     end
@@ -324,11 +332,11 @@ function redResume()  -- Set redstone states from memory
 end
 
 function checkHardware()  -- Test hardware compatibility and display errors (also tries to set the selected resolution)
-    local w, h = gpu.maxResolution()
+    local w, h = maxResolution()
     print("Checking hardware...")
     if w >= resolution[1] and h >= resolution[2] then
-        local currRes = pack(gpu.getResolution())
-        if gpu.setResolution(unpack(resolution)) or (currRes[1] == resolution[1] and currRes[2] == resolution[2]) then
+        local currRes = pack(getResolution())
+        if setResolution(unpack(resolution)) or (currRes[1] == resolution[1] and currRes[2] == resolution[2]) then
             if component.isAvailable("redstone") then
                 if component.isAvailable("data") then
                     return  -- Everything OK
@@ -480,7 +488,7 @@ end
 
 function setRes()  -- Change resolution
     local w, h = unpack(resolution)
-    local mw, mh = gpu.maxResolution()
+    local mw, mh = maxResolution()
     clear()
     print("The resolution has to be at least " .. minRes[1] .. "x" .. minRes[2] .. ".")
     print("The resolution has to be at most " .. floor(mw) .. "x" .. floor(mh) .. ".")
@@ -493,8 +501,8 @@ function setRes()  -- Change resolution
         h = tonumber(h)
         if w ~= nil and h ~= nil then
             if w > minRes[1] and h > minRes[2] and w <= mw and h <= mh then
-                if gpu.setResolution(w, h) then
-                    resolution = pack(gpu.getResolution())
+                if setResolution(w, h) then
+                    resolution = pack(getResolution())
                     saveSettings()
                     return
                 else
@@ -758,7 +766,7 @@ end
 
 --- END ---
 
-gpu.setResolution(unpack(nativeRes))  -- Reset resolution
+setResolution(unpack(nativeRes))  -- Reset resolution
 if errLog then errLog:close() end
 sleep(.5)
 clear()
